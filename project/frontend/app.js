@@ -1,6 +1,8 @@
 App({
   globalData: {
-    apiBase: 'http://127.0.0.1:8080',
-    user: ''
+    apiBase: 'http://10.27.129.102:8080',
+    user: '',
+    token: '',
+    openid: ''
   }
 })
