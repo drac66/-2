@@ -13,13 +13,18 @@ import java.util.Map;
 @CrossOrigin
 public class DiaryController {
     private final JdbcTemplate jdbc;
+    private final AuthController authController;
 
-    public DiaryController(JdbcTemplate jdbc) {
+    public DiaryController(JdbcTemplate jdbc, AuthController authController) {
         this.jdbc = jdbc;
+        this.authController = authController;
     }
 
     @GetMapping
-    public ApiResponse<List<Map<String, Object>>> list(@RequestParam String viewer) {
+    public ApiResponse<List<Map<String, Object>>> list(@RequestHeader(value = "X-Auth-Token", required = false) String token) {
+        String viewer = authController.resolveOpenid(token);
+        if (viewer == null) return ApiResponse.fail("unauthorized");
+
         var sql = """
                 select id, author, title, content, visibility, created_at
                 from couple_diary
@@ -31,8 +36,13 @@ public class DiaryController {
     }
 
     @PostMapping
-    public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, String> body) {
-        String author = body.getOrDefault("author", "unknown");
+    public ApiResponse<Map<String, Object>> create(
+            @RequestHeader(value = "X-Auth-Token", required = false) String token,
+            @RequestBody Map<String, String> body
+    ) {
+        String author = authController.resolveOpenid(token);
+        if (author == null) return ApiResponse.fail("unauthorized");
+
         String title = body.getOrDefault("title", "").trim();
         String content = body.getOrDefault("content", "").trim();
         String visibility = body.getOrDefault("visibility", "self");

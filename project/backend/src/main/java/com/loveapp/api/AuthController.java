@@ -6,11 +6,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,7 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @CrossOrigin
 public class AuthController {
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     @Value("${wechat.appid:}")
     private String appId;
@@ -51,12 +54,19 @@ public class AuthController {
                     + "&js_code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
                     + "&grant_type=authorization_code";
 
-            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).GET().build();
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                    .timeout(Duration.ofSeconds(8))
+                    .GET()
+                    .build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-            JsonNode json = objectMapper.readTree(resp.body());
 
+            if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+                return ApiResponse.fail("wx login http error: " + resp.statusCode());
+            }
+
+            JsonNode json = objectMapper.readTree(resp.body());
             if (json.hasNonNull("errcode") && json.get("errcode").asInt() != 0) {
-                return ApiResponse.fail("wx login failed: " + json.path("errmsg").asText("unknown"));
+                return ApiResponse.fail("wx login failed: " + json.path("errmsg").asText("unknown") + " (" + json.path("errcode").asInt() + ")");
             }
 
             String openid = json.path("openid").asText("");
@@ -75,23 +85,26 @@ public class AuthController {
                     "openid", openid
             ));
         } catch (Exception e) {
-            return ApiResponse.fail("wx login error: " + e.getMessage());
+            return ApiResponse.fail("wx login error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> me(@RequestHeader(value = "X-Auth-Token", required = false) String token) {
-        if (token == null || token.isBlank()) return ApiResponse.fail("unauthorized");
-        String openid = tokenToOpenid.get(token);
+        String openid = resolveOpenid(token);
         if (openid == null) return ApiResponse.fail("unauthorized");
         return ApiResponse.ok(Map.of("openid", openid));
     }
 
     public boolean isTokenAllowed(String token) {
-        if (token == null || token.isBlank()) return false;
-        String openid = tokenToOpenid.get(token);
+        String openid = resolveOpenid(token);
         if (openid == null) return false;
         return parseWhitelist(openidWhitelist).contains(openid);
+    }
+
+    public String resolveOpenid(String token) {
+        if (token == null || token.isBlank()) return null;
+        return tokenToOpenid.get(token);
     }
 
     private Set<String> parseWhitelist(String raw) {

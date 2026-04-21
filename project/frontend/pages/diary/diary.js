@@ -1,15 +1,16 @@
 const app = getApp();
 
 function request(path, method, data) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const token = app.globalData.token || wx.getStorageSync('token') || '';
     wx.request({
       url: `${app.globalData.apiBase}${path}`,
       method,
       data,
+      timeout: 12000,
       header: token ? { 'X-Auth-Token': token } : {},
-      success: (res) => resolve(res.data),
-      fail: reject
+      success: (res) => resolve({ ok: true, statusCode: res.statusCode, data: res.data }),
+      fail: (err) => resolve({ ok: false, error: err })
     });
   });
 }
@@ -25,33 +26,41 @@ Page({
   },
 
   async loadList() {
-    const viewer = app.globalData.openid || 'unknown';
-    try {
-      const res = await request(`/api/diary?viewer=${encodeURIComponent(viewer)}`, 'GET');
-      if (!res.success) throw new Error(res.message || 'failed');
-      this.setData({ list: res.data || [] });
-    } catch (e) {
-      wx.showToast({ title: '加载失败', icon: 'none' });
+    const ret = await request('/api/diary', 'GET');
+    if (!ret.ok) {
+      wx.showToast({ title: '加载失败(网络)', icon: 'none' });
+      return;
     }
+    const res = ret.data || {};
+    if (ret.statusCode !== 200 || !res.success) {
+      wx.showToast({ title: res.message || '加载失败', icon: 'none' });
+      return;
+    }
+    this.setData({ list: res.data || [] });
   },
 
   async save() {
-    const author = app.globalData.openid || 'unknown';
     const content = (this.data.content || '').trim();
     if (!content) {
       wx.showToast({ title: '内容不能为空', icon: 'none' });
       return;
     }
-    const res = await request('/api/diary', 'POST', {
-      author,
+    const ret = await request('/api/diary', 'POST', {
       title: this.data.title || '',
       content,
       visibility: this.data.visibility
     });
-    if (!res.success) {
+
+    if (!ret.ok) {
+      wx.showToast({ title: '保存失败(网络)', icon: 'none' });
+      return;
+    }
+    const res = ret.data || {};
+    if (ret.statusCode !== 200 || !res.success) {
       wx.showToast({ title: res.message || '保存失败', icon: 'none' });
       return;
     }
+
     this.setData({ title: '', content: '', visibility: 'self' });
     this.loadList();
   },

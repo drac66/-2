@@ -7,9 +7,10 @@ function request(path, method, data) {
       url: `${app.globalData.apiBase}${path}`,
       method,
       data,
+      timeout: 12000,
       header: token ? { 'X-Auth-Token': token } : {},
-      success: (res) => resolve(res.data),
-      fail: reject
+      success: (res) => resolve({ ok: true, statusCode: res.statusCode, data: res.data }),
+      fail: (err) => resolve({ ok: false, error: err })
     });
   });
 }
@@ -24,9 +25,16 @@ Page({
             wx.showToast({ title: '获取登录code失败', icon: 'none' });
             return;
           }
-          const res = await request('/api/auth/wx-login', 'POST', { code });
-          if (!res.success) {
-            wx.showToast({ title: res.message || '登录失败', icon: 'none' });
+
+          const ret = await request('/api/auth/wx-login', 'POST', { code });
+          if (!ret.ok) {
+            wx.showToast({ title: '网络超时，请重试', icon: 'none' });
+            return;
+          }
+
+          const res = ret.data || {};
+          if (ret.statusCode !== 200 || !res.success) {
+            wx.showToast({ title: res.message || `登录失败(${ret.statusCode})`, icon: 'none' });
             return;
           }
 

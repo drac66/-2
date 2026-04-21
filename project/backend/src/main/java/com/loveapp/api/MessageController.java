@@ -13,9 +13,11 @@ import java.util.Map;
 @CrossOrigin
 public class MessageController {
     private final JdbcTemplate jdbc;
+    private final AuthController authController;
 
-    public MessageController(JdbcTemplate jdbc) {
+    public MessageController(JdbcTemplate jdbc, AuthController authController) {
         this.jdbc = jdbc;
+        this.authController = authController;
     }
 
     @GetMapping
@@ -25,8 +27,13 @@ public class MessageController {
     }
 
     @PostMapping
-    public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, String> body) {
-        String sender = body.getOrDefault("sender", "unknown");
+    public ApiResponse<Map<String, Object>> create(
+            @RequestHeader(value = "X-Auth-Token", required = false) String token,
+            @RequestBody Map<String, String> body
+    ) {
+        String sender = authController.resolveOpenid(token);
+        if (sender == null) return ApiResponse.fail("unauthorized");
+
         String content = body.getOrDefault("content", "").trim();
         if (content.isEmpty()) return ApiResponse.fail("content cannot be empty");
 
