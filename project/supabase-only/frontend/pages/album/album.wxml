@@ -1,0 +1,17 @@
+<view class="container">
+  <view class="card">
+    <view class="title">相册</view>
+    <input class="input" placeholder="写一句备注（可选）" bindinput="onNoteInput" value="{{note}}" />
+    <button class="btn-primary" style="margin-bottom:12rpx" bindtap="chooseImage">上传图片</button>
+    <button class="btn-primary" bindtap="chooseVideo">上传视频</button>
+  </view>
+
+  <block wx:for="{{list}}" wx:key="id">
+    <view class="card">
+      <view>{{item.owner}} · {{item.created_at}}</view>
+      <view wx:if="{{item.note}}">备注：{{item.note}}</view>
+      <image wx:if="{{item.media_type==='image'}}" mode="widthFix" src="{{item.media_url}}" style="width:100%;margin-top:12rpx;border-radius:12rpx" />
+      <video wx:if="{{item.media_type==='video'}}" src="{{item.media_url}}" controls style="width:100%;margin-top:12rpx;border-radius:12rpx" />
+    </view>
+  </block>
+</view>

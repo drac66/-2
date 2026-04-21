@@ -1,0 +1,10 @@
+{
+  "description": "微信云开发版函数目录",
+  "functions": [
+    "wxlogin",
+    "messages",
+    "diary",
+    "albumsUpload",
+    "albumsList"
+  ]
+}
