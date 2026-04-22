@@ -6,9 +6,8 @@ App({
       return;
     }
 
-    // TODO: 改成你自己的云开发环境 ID（例如 cloud1-xxxxxx）
     wx.cloud.init({
-      env: 'replace-with-your-env-id',
+      env: 'dsx57-d1gpxn8u87a6ddbb8',
       traceUser: true
     });
   },
