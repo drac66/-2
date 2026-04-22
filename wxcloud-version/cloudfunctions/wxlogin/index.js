@@ -7,7 +7,8 @@ const db = cloud.database();
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
   const openid = wxContext.OPENID;
-  if (!config.openidWhitelist.includes(openid)) {
+
+  if (config.enforceWhitelist && !config.openidWhitelist.includes(openid)) {
     return { success: false, message: 'no permission', data: null };
   }
 
