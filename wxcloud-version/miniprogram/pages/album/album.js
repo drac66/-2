@@ -1,96 +1,119 @@
 const app = getApp();
 
-function request(path, method, data) {
-  return new Promise((resolve) => {
-    const token = app.globalData.token || wx.getStorageSync('token') || '';
-    wx.request({
-      url: `${app.globalData.apiBase}${path}`,
-      method,
-      data,
-      timeout: 12000,
-      header: token ? { 'X-Auth-Token': token } : {},
-      success: (res) => resolve({ ok: true, statusCode: res.statusCode, data: res.data }),
-      fail: (err) => resolve({ ok: false, error: err })
-    });
+async function uploadToCloud(filePath, mediaType) {
+  const suffix = mediaType === 'video' ? '.mp4' : '.jpg';
+  const cloudPath = `albums/${Date.now()}_${Math.random().toString(16).slice(2)}${suffix}`;
+
+  const uploadRes = await wx.cloud.uploadFile({
+    cloudPath,
+    filePath
   });
+
+  return uploadRes.fileID;
 }
 
-function chooseAndUpload(mediaType, note, done) {
-  wx.chooseMedia({
-    count: 1,
-    mediaType: [mediaType],
-    success: async (r) => {
-      const file = r.tempFiles && r.tempFiles[0];
-      if (!file || !file.tempFilePath) {
-        wx.showToast({ title: '未选择文件', icon: 'none' });
-        return;
-      }
-
-      const token = app.globalData.token || wx.getStorageSync('token') || '';
-      wx.uploadFile({
-        url: `${app.globalData.apiBase}/api/albums/upload?mediaType=${encodeURIComponent(mediaType)}&note=${encodeURIComponent(note || '')}`,
-        filePath: file.tempFilePath,
-        name: 'file',
-        timeout: 20000,
-        header: token ? { 'X-Auth-Token': token } : {},
-        success: (res) => {
-          try {
-            const data = JSON.parse(res.data || '{}');
-            if (res.statusCode !== 200 || !data.success) {
-              wx.showToast({ title: data.message || '上传失败', icon: 'none' });
-              return;
-            }
-            wx.showToast({ title: '上传成功', icon: 'success' });
-            done && done();
-          } catch (e) {
-            wx.showToast({ title: '上传响应异常', icon: 'none' });
-          }
-        },
-        fail: () => wx.showToast({ title: '上传超时或失败', icon: 'none' })
-      });
+async function saveAlbumRecord(mediaType, fileID, note) {
+  const token = app.globalData.token || wx.getStorageSync('token') || '';
+  const res = await wx.cloud.callFunction({
+    name: 'albumsUpload',
+    data: {
+      token,
+      cloudPath: fileID,
+      mediaType,
+      note: note || ''
     }
   });
+
+  return res.result || {};
 }
 
 Page({
   data: { list: [], note: '' },
 
-  onNoteInput(e) { this.setData({ note: e.detail.value }); },
+  onNoteInput(e) {
+    this.setData({ note: e.detail.value });
+  },
 
   async loadList() {
-    const ret = await request('/api/albums?limit=100', 'GET');
-    if (!ret.ok) {
+    try {
+      const token = app.globalData.token || wx.getStorageSync('token') || '';
+      const res = await wx.cloud.callFunction({
+        name: 'albumsList',
+        data: { token }
+      });
+      const ret = res.result || {};
+      if (!ret.success) {
+        wx.showToast({ title: ret.message || '加载失败', icon: 'none' });
+        return;
+      }
+
+      const list = ret.data || [];
+      const fileIDs = list
+        .map((it) => it.media_url)
+        .filter((v) => typeof v === 'string' && v.startsWith('cloud://'));
+
+      let tempMap = {};
+      if (fileIDs.length) {
+        const tmp = await wx.cloud.getTempFileURL({ fileList: fileIDs });
+        tempMap = (tmp.fileList || []).reduce((m, it) => {
+          m[it.fileID] = it.tempFileURL || '';
+          return m;
+        }, {});
+      }
+
+      const merged = list.map((it) => {
+        const fileID = it.media_url || '';
+        if (fileID.startsWith('cloud://')) {
+          return { ...it, media_url: tempMap[fileID] || '' };
+        }
+        return it;
+      });
+
+      this.setData({ list: merged });
+    } catch (e) {
       wx.showToast({ title: '加载失败(网络)', icon: 'none' });
-      return;
     }
-    const res = ret.data || {};
-    if (ret.statusCode !== 200 || !res.success) {
-      wx.showToast({ title: res.message || '加载失败', icon: 'none' });
-      return;
-    }
-
-    const list = (res.data || []).map((it) => {
-      const url = it.media_url || '';
-      if (url.startsWith('http://') || url.startsWith('https://')) return it;
-      return { ...it, media_url: `${app.globalData.apiBase}${url}` };
-    });
-
-    this.setData({ list });
   },
 
   async chooseImage() {
-    chooseAndUpload('image', this.data.note, () => {
-      this.setData({ note: '' });
-      this.loadList();
-    });
+    this.chooseAndUpload('image');
   },
 
   async chooseVideo() {
-    chooseAndUpload('video', this.data.note, () => {
-      this.setData({ note: '' });
-      this.loadList();
+    this.chooseAndUpload('video');
+  },
+
+  chooseAndUpload(mediaType) {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: [mediaType],
+      success: async (r) => {
+        try {
+          const file = r.tempFiles && r.tempFiles[0];
+          if (!file || !file.tempFilePath) {
+            wx.showToast({ title: '未选择文件', icon: 'none' });
+            return;
+          }
+
+          const fileID = await uploadToCloud(file.tempFilePath, mediaType);
+          const ret = await saveAlbumRecord(mediaType, fileID, this.data.note);
+
+          if (!ret.success) {
+            wx.showToast({ title: ret.message || '写入记录失败', icon: 'none' });
+            return;
+          }
+
+          wx.showToast({ title: '上传成功', icon: 'success' });
+          this.setData({ note: '' });
+          this.loadList();
+        } catch (e) {
+          wx.showToast({ title: '上传失败', icon: 'none' });
+        }
+      }
     });
   },
 
-  onShow() { this.loadList(); }
+  onShow() {
+    this.loadList();
+  }
 });
