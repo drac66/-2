@@ -6,8 +6,8 @@ const _ = db.command;
 
 async function auth(token) {
   if (!token) return null;
-  const r = await db.collection('tokens').where({ token }).limit(1).get();
-  return r.data && r.data[0] ? r.data[0].openid : null;
+  // 开发阶段：token 直接视为 openid
+  return token;
 }
 
 exports.main = async (event) => {
