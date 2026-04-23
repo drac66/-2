@@ -2,6 +2,7 @@
   <view class="card">
     <button class="btn-primary" style="margin-bottom:16rpx" bindtap="toAlbum">📷 相册</button>
     <button class="btn-primary" style="margin-bottom:16rpx" bindtap="toMessages">💬 留言板</button>
-    <button class="btn-primary" bindtap="toDiary">📔 </button>
+    <button class="btn-primary" style="margin-bottom:16rpx" bindtap="toDiary">📔 日记</button>
+    <button style="background:#fff;color:#ff5c8d;border:1rpx solid #ffb5cb;border-radius:999rpx;" bindtap="logout">退出登录</button>
   </view>
 </view>
