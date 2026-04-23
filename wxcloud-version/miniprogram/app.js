@@ -13,6 +13,7 @@ App({
   },
   globalData: {
     token: '',
-    openid: ''
+    openid: '',
+    nickname: ''
   }
 });
