@@ -1,7 +1,6 @@
 // albumsUpload 云函数（接收 cloudPath）
 const cloud = require('wx-server-sdk');
-const config = require('../config');
-cloud.init({ env: config.envId });
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
 async function auth(token) {

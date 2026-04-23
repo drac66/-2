@@ -1,7 +1,6 @@
 // albumsList 云函数
 const cloud = require('wx-server-sdk');
-const config = require('../config');
-cloud.init({ env: config.envId });
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
 async function auth(token) {
