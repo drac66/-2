@@ -1,4 +1,4 @@
-<view class="page-bg"></view>
+<image class="page-bg-image" src="/assets/wallpaper.jpg" mode="aspectFill"></image>
 <view class="page-mask"></view>
 <view class="container page-shell">
   <view class="card">
