@@ -174,10 +174,10 @@ page {
 
 .tap-star {
   position: fixed;
-  margin-left: -8rpx;
-  margin-top: -8rpx;
+  margin-left: -12rpx;
+  margin-top: -12rpx;
   color: #fffbe8;
-  font-size: 24rpx;
+  font-size: 34rpx;
   line-height: 1;
   z-index: 21;
   pointer-events: none;
