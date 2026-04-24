@@ -1,5 +1,5 @@
 {
-  "desc": "恋爱小程序",
+  "desc": "秘密空间",
   "appid": "wx17ffabe0f28fce1c",
   "setting": {
     "es6": false,
@@ -15,7 +15,7 @@
     "minifyWXML": true,
     "localPlugins": false,
     "disableUseStrict": false,
-    "useCompilerPlugins": false,
+    "useCompilerPlugins": true,
     "condition": false,
     "swc": false,
     "disableSWC": true,
@@ -31,5 +31,6 @@
     "ignore": [],
     "include": []
   },
-  "editorSetting": {}
+  "editorSetting": {},
+  "libVersion": "3.15.2"
 }
