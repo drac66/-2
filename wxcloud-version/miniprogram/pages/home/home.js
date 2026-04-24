@@ -10,9 +10,11 @@ Page({
     }
   },
 
-  spawnClickFx(e) {
-    const x = (e && e.detail && typeof e.detail.x === 'number') ? e.detail.x : 0;
-    const y = (e && e.detail && typeof e.detail.y === 'number') ? e.detail.y : 0;
+  onGlobalTap(e) {
+    const d = (e && e.detail) || {};
+    const t = (e && e.touches && e.touches[0]) || (e && e.changedTouches && e.changedTouches[0]) || null;
+    const x = t && typeof t.clientX === 'number' ? t.clientX : (typeof d.x === 'number' ? d.x : 0);
+    const y = t && typeof t.clientY === 'number' ? t.clientY : (typeof d.y === 'number' ? d.y : 0);
     const id = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const fx = { id, x, y };
 
@@ -22,20 +24,12 @@ Page({
     }, 520);
   },
 
-  goWithFx(e, url) {
-    this.spawnClickFx(e);
-    setTimeout(() => {
-      wx.navigateTo({ url });
-    }, 120);
-  },
+  toAlbum() { wx.navigateTo({ url: '/pages/album/album' }); },
+  toMessages() { wx.navigateTo({ url: '/pages/messages/messages' }); },
+  toDiary() { wx.navigateTo({ url: '/pages/diary/diary' }); },
+  toSettings() { wx.navigateTo({ url: '/pages/settings/settings' }); },
 
-  toAlbum(e) { this.goWithFx(e, '/pages/album/album'); },
-  toMessages(e) { this.goWithFx(e, '/pages/messages/messages'); },
-  toDiary(e) { this.goWithFx(e, '/pages/diary/diary'); },
-  toSettings(e) { this.goWithFx(e, '/pages/settings/settings'); },
-
-  logout(e) {
-    this.spawnClickFx(e);
+  logout() {
     wx.removeStorageSync('token');
     wx.removeStorageSync('openid');
     wx.removeStorageSync('nickname');

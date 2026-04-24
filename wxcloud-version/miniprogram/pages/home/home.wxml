@@ -8,7 +8,7 @@
   <view class="tap-star star-c" style="left:{{item.x}}px;top:{{item.y}}px;">✦</view>
 </block>
 
-<view class="container page-shell">
+<view class="container page-shell" bindtap="onGlobalTap">
   <view class="surface">
     <view class="cloud cloud-a"></view>
     <view class="cloud cloud-a-1"></view>

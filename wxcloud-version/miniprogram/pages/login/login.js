@@ -2,7 +2,22 @@ const app = getApp();
 
 Page({
   data: {
-    loggingIn: false
+    loggingIn: false,
+    clickFx: []
+  },
+
+  onGlobalTap(e) {
+    const d = (e && e.detail) || {};
+    const t = (e && e.touches && e.touches[0]) || (e && e.changedTouches && e.changedTouches[0]) || null;
+    const x = t && typeof t.clientX === 'number' ? t.clientX : (typeof d.x === 'number' ? d.x : 0);
+    const y = t && typeof t.clientY === 'number' ? t.clientY : (typeof d.y === 'number' ? d.y : 0);
+    const id = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const fx = { id, x, y };
+
+    this.setData({ clickFx: [...this.data.clickFx, fx] });
+    setTimeout(() => {
+      this.setData({ clickFx: this.data.clickFx.filter((it) => it.id !== id) });
+    }, 520);
   },
 
   async finishLoginByWxContext() {
@@ -80,4 +95,3 @@ Page({
     }
   }
 });
-

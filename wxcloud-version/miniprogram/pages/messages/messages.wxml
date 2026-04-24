@@ -1,6 +1,12 @@
 <image class="page-bg-image" src="/assets/wallpaper.jpg" mode="aspectFill"></image>
 <view class="page-mask"></view>
-<view class="container page-shell">
+<block wx:for="{{clickFx}}" wx:key="id">
+  <view class="tap-ripple" style="left:{{item.x}}px;top:{{item.y}}px;"></view>
+  <view class="tap-star star-a" style="left:{{item.x}}px;top:{{item.y}}px;">✦</view>
+  <view class="tap-star star-b" style="left:{{item.x}}px;top:{{item.y}}px;">✦</view>
+  <view class="tap-star star-c" style="left:{{item.x}}px;top:{{item.y}}px;">✦</view>
+</block>
+<view class="container page-shell" bindtap="onGlobalTap">
   <view class="card">
     <view class="title">留言板</view>
     <input class="input" placeholder="写点想说的话..." bindinput="onInput" value="{{content}}" />
