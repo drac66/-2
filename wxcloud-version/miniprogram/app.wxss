@@ -125,20 +125,20 @@ page {
 
 /* 首页4个入口：森林感轮廓 + 渐变，不再是大绿块 */
 .forest-btn {
-  height: 88rpx;
-  line-height: 88rpx;
+  height: 96rpx;
+  line-height: 96rpx;
   background:
-    linear-gradient(135deg, rgba(95, 200, 145, 0.55), rgba(85, 178, 235, 0.56), rgba(243, 170, 215, 0.54)),
-    rgba(255, 255, 255, 0.26);
+    linear-gradient(135deg, rgba(95, 200, 145, 0.5), rgba(85, 178, 235, 0.52), rgba(243, 170, 215, 0.5)),
+    rgba(255, 255, 255, 0.22);
   color: #ffffff;
-  border: 1rpx solid rgba(236, 248, 255, 0.9);
+  border: 2rpx solid rgba(240, 250, 255, 0.9);
   border-radius: 999rpx;
   font-size: 34rpx;
   font-weight: 700;
   letter-spacing: 1rpx;
   text-align: center;
-  text-shadow: 0 3rpx 8rpx rgba(17, 58, 92, 0.36);
-  box-shadow: 0 12rpx 22rpx rgba(24, 80, 122, 0.22), inset 0 1rpx 0 rgba(255, 255, 255, 0.45);
+  text-shadow: 0 3rpx 8rpx rgba(17, 58, 92, 0.34);
+  box-shadow: 0 14rpx 26rpx rgba(24, 80, 122, 0.2), inset 0 2rpx 0 rgba(255, 255, 255, 0.5);
 }
 
 .input {

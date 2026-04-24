@@ -2,16 +2,22 @@ const app = getApp();
 
 function fmtTime(v) {
   if (!v) return '';
-  if (typeof v === 'string') return v;
-  if (v instanceof Date) {
-    const y = v.getFullYear();
-    const m = `${v.getMonth() + 1}`.padStart(2, '0');
-    const d = `${v.getDate()}`.padStart(2, '0');
-    const hh = `${v.getHours()}`.padStart(2, '0');
-    const mm = `${v.getMinutes()}`.padStart(2, '0');
-    return `${y}-${m}-${d} ${hh}:${mm}`;
+
+  let d = null;
+  if (v instanceof Date) d = v;
+  else if (typeof v === 'string' || typeof v === 'number') {
+    const parsed = new Date(v);
+    if (!Number.isNaN(parsed.getTime())) d = parsed;
   }
-  return `${v}`;
+
+  if (!d) return `${v}`;
+
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  const hh = `${d.getHours()}`.padStart(2, '0');
+  const mm = `${d.getMinutes()}`.padStart(2, '0');
+  return `${y}-${m}-${day}\n${hh}:${mm}`;
 }
 
 Page({

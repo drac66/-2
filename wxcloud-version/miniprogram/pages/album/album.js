@@ -1,7 +1,23 @@
 const app = getApp();
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function fmtTime(v) {
+  if (!v) return '';
+
+  let d = null;
+  if (v instanceof Date) d = v;
+  else if (typeof v === 'string' || typeof v === 'number') {
+    const parsed = new Date(v);
+    if (!Number.isNaN(parsed.getTime())) d = parsed;
+  }
+
+  if (!d) return `${v}`;
+
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  const hh = `${d.getHours()}`.padStart(2, '0');
+  const mm = `${d.getMinutes()}`.padStart(2, '0');
+  return `${y}-${m}-${day}\n${hh}:${mm}`;
 }
 
 async function withTimeout(promise, ms, label) {
@@ -112,10 +128,11 @@ Page({
 
       const merged = list.map((it) => {
         const fileID = it.media_url || '';
+        const show_time = fmtTime(it.created_at);
         if (fileID.startsWith('cloud://')) {
-          return { ...it, media_url: tempMap[fileID] || '' };
+          return { ...it, media_url: tempMap[fileID] || '', show_time };
         }
-        return it;
+        return { ...it, show_time };
       });
 
       this.setData({ list: merged });

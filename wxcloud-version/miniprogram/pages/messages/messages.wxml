@@ -10,7 +10,7 @@
   <block wx:for="{{list}}" wx:key="_id">
     <view class="card list-gap">
       <view class="mt-8" style="white-space:pre-wrap">{{item.content}}</view>
-      <view class="meta mt-8">{{item.show_time}}</view>
+      <view class="meta mt-8" style="white-space:pre-line">{{item.show_time}}</view>
     </view>
   </block>
 </view>
