@@ -158,6 +158,59 @@ page {
   border: none;
 }
 
+.tap-ripple {
+  position: fixed;
+  width: 22rpx;
+  height: 22rpx;
+  margin-left: -11rpx;
+  margin-top: -11rpx;
+  border-radius: 999rpx;
+  border: 3rpx solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 4rpx rgba(131, 219, 255, 0.28);
+  z-index: 20;
+  pointer-events: none;
+  animation: tapRipple 480ms ease-out forwards;
+}
+
+.tap-star {
+  position: fixed;
+  margin-left: -8rpx;
+  margin-top: -8rpx;
+  color: #fffbe8;
+  font-size: 24rpx;
+  line-height: 1;
+  z-index: 21;
+  pointer-events: none;
+  text-shadow: 0 2rpx 6rpx rgba(48, 141, 194, 0.4);
+}
+
+.star-a { animation: tapStarA 460ms ease-out forwards; }
+.star-b { animation: tapStarB 500ms ease-out forwards; }
+.star-c { animation: tapStarC 430ms ease-out forwards; }
+
+@keyframes tapRipple {
+  0% { transform: scale(0.4); opacity: 0.95; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+@keyframes tapStarA {
+  0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(-20rpx, -28rpx) scale(1); opacity: 0; }
+}
+
+@keyframes tapStarB {
+  0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(24rpx, -20rpx) scale(0.95); opacity: 0; }
+}
+
+@keyframes tapStarC {
+  0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(10rpx, 20rpx) scale(0.9); opacity: 0; }
+}
+
 .list-gap { margin-top: 8rpx; }
 .mt-8 { margin-top: 8rpx; }
 .mt-12 { margin-top: 12rpx; }

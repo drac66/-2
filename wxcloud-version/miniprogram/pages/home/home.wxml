@@ -1,5 +1,13 @@
 <image class="page-bg-image" src="/assets/wallpaper.jpg" mode="aspectFill"></image>
 <view class="page-mask"></view>
+
+<block wx:for="{{clickFx}}" wx:key="id">
+  <view class="tap-ripple" style="left:{{item.x}}px;top:{{item.y}}px;"></view>
+  <view class="tap-star star-a" style="left:{{item.x}}px;top:{{item.y}}px;">✦</view>
+  <view class="tap-star star-b" style="left:{{item.x}}px;top:{{item.y}}px;">✦</view>
+  <view class="tap-star star-c" style="left:{{item.x}}px;top:{{item.y}}px;">✦</view>
+</block>
+
 <view class="container page-shell">
   <view class="surface">
     <view class="cloud cloud-a"></view>
