@@ -126,19 +126,23 @@ page {
 /* 首页4个入口：森林感轮廓 + 渐变，不再是大绿块 */
 .forest-btn {
   height: 96rpx;
-  line-height: 96rpx;
+  line-height: normal;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background:
-    linear-gradient(135deg, rgba(95, 200, 145, 0.5), rgba(85, 178, 235, 0.52), rgba(243, 170, 215, 0.5)),
-    rgba(255, 255, 255, 0.22);
+    linear-gradient(140deg, rgba(95, 200, 145, 0.46), rgba(85, 178, 235, 0.48), rgba(243, 170, 215, 0.46)),
+    rgba(255, 255, 255, 0.2);
   color: #ffffff;
-  border: 2rpx solid rgba(240, 250, 255, 0.9);
+  border: 2rpx solid rgba(241, 251, 255, 0.9);
   border-radius: 999rpx;
   font-size: 34rpx;
   font-weight: 700;
   letter-spacing: 1rpx;
   text-align: center;
-  text-shadow: 0 3rpx 8rpx rgba(17, 58, 92, 0.34);
-  box-shadow: 0 14rpx 26rpx rgba(24, 80, 122, 0.2), inset 0 2rpx 0 rgba(255, 255, 255, 0.5);
+  text-shadow: 0 2rpx 6rpx rgba(18, 61, 97, 0.28);
+  box-shadow: 0 14rpx 24rpx rgba(24, 80, 122, 0.16), inset 0 2rpx 0 rgba(255, 255, 255, 0.46);
 }
 
 .input {
@@ -150,8 +154,8 @@ page {
   color: #1f3750;
 }
 
-.input::placeholder {
-  color: rgba(74, 106, 135, 0.6);
+.forest-btn::after {
+  border: none;
 }
 
 .list-gap { margin-top: 8rpx; }
