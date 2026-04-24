@@ -97,13 +97,13 @@ page {
 .section-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #b7e8ff;
+  color: #111111;
   margin-bottom: 12rpx;
 }
 
 .meta {
   font-size: 24rpx;
-  color: #9fdcff;
+  color: #111111;
 }
 
 /* 常规按钮：回到你更喜欢的渐变（非绿色块） */
@@ -128,16 +128,17 @@ page {
   height: 88rpx;
   line-height: 88rpx;
   background:
-    linear-gradient(135deg, rgba(123, 227, 168, 0.35), rgba(101, 195, 255, 0.36), rgba(255, 191, 227, 0.34)),
-    rgba(255, 255, 255, 0.18);
+    linear-gradient(135deg, rgba(95, 200, 145, 0.55), rgba(85, 178, 235, 0.56), rgba(243, 170, 215, 0.54)),
+    rgba(255, 255, 255, 0.26);
   color: #ffffff;
-  border: 1rpx solid rgba(235, 255, 241, 0.8);
+  border: 1rpx solid rgba(236, 248, 255, 0.9);
   border-radius: 999rpx;
   font-size: 34rpx;
   font-weight: 700;
   letter-spacing: 1rpx;
-  text-shadow: 0 3rpx 8rpx rgba(20, 77, 52, 0.34);
-  box-shadow: 0 10rpx 20rpx rgba(33, 94, 137, 0.18);
+  text-align: center;
+  text-shadow: 0 3rpx 8rpx rgba(17, 58, 92, 0.36);
+  box-shadow: 0 12rpx 22rpx rgba(24, 80, 122, 0.22), inset 0 1rpx 0 rgba(255, 255, 255, 0.45);
 }
 
 .input {
