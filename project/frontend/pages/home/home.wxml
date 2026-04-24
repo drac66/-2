@@ -1,7 +1,12 @@
 <view class="container">
+  <view class="surface">
+    <view class="hero-title">🌿 我们的小森林</view>
+    <view class="hero-subtitle">挑一个想去的地方吧</view>
+  </view>
+
   <view class="card">
-    <button class="btn-primary" style="margin-bottom:16rpx" bindtap="toAlbum">📷 相册</button>
-    <button class="btn-primary" style="margin-bottom:16rpx" bindtap="toMessages">💬 留言板</button>
+    <button class="btn-primary mb-16" bindtap="toAlbum">📷 相册</button>
+    <button class="btn-primary mb-16" bindtap="toMessages">💬 留言板</button>
     <button class="btn-primary" bindtap="toDiary">📔 日记</button>
   </view>
 </view>

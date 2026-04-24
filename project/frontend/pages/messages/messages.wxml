@@ -6,10 +6,10 @@
   </view>
 
   <block wx:for="{{list}}" wx:key="id">
-    <view class="card">
-      <view style="font-weight:600">{{item.sender}}</view>
-      <view style="margin:8rpx 0">{{item.content}}</view>
-      <view style="font-size:24rpx;color:#999">{{item.created_at}}</view>
+    <view class="card list-gap">
+      <view class="section-title">{{item.sender}}</view>
+      <view class="mt-8">{{item.content}}</view>
+      <view class="meta mt-8">{{item.created_at}}</view>
     </view>
   </block>
 </view>

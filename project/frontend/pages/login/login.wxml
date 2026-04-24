@@ -1,7 +1,12 @@
 <view class="container">
+  <view class="surface">
+    <view class="hero-title">欢迎回来</view>
+    <view class="hero-subtitle">只给我们俩的小角落</view>
+  </view>
+
   <view class="card">
-    <view class="title">欢迎来到我们的空间 💗</view>
-    <view style="margin-bottom: 20rpx; color:#666;">仅白名单用户可进入</view>
+    <view class="title">登录空间</view>
+    <view class="meta mb-16">仅白名单用户可进入</view>
     <button class="btn-primary" bindtap="wxLogin">微信一键登录</button>
   </view>
 </view>
