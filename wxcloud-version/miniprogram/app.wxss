@@ -11,7 +11,7 @@ page {
   right: 0;
   bottom: 0;
   z-index: 0;
-  background-image: url('./assets/wallpaper.jpg');
+  background-image: url(assets/wallpaper.jpg);
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
@@ -101,13 +101,13 @@ page {
 .section-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #ffffff;
+  color: #b7e8ff;
   margin-bottom: 12rpx;
 }
 
 .meta {
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.95);
+  color: #9fdcff;
 }
 
 /* 常规按钮：回到你更喜欢的渐变（非绿色块） */
