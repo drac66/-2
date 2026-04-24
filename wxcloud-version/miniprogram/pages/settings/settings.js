@@ -8,7 +8,9 @@ Page({
   },
 
   onLoad(query) {
-    this.setData({ first: query && query.first === '1' });
+    const first = !!(query && query.first === '1');
+    const currentName = app.globalData.nickname || wx.getStorageSync('nickname') || '';
+    this.setData({ first, nickname: currentName });
   },
 
   onInput(e) {
@@ -43,9 +45,11 @@ Page({
       wx.setStorageSync('nickname', finalName);
       wx.showToast({ title: '昵称已保存', icon: 'success' });
 
-      setTimeout(() => {
-        wx.reLaunch({ url: '/pages/home/home' });
-      }, 250);
+      if (this.data.first) {
+        setTimeout(() => {
+          wx.reLaunch({ url: '/pages/home/home' });
+        }, 250);
+      }
     } catch (e) {
       wx.showToast({ title: '保存失败，请重试', icon: 'none' });
     } finally {
@@ -54,3 +58,4 @@ Page({
     }
   }
 });
+

@@ -5,11 +5,11 @@
     <button class="btn-primary" bindtap="send">发送留言</button>
   </view>
 
-  <block wx:for="{{list}}" wx:key="id">
+  <block wx:for="{{list}}" wx:key="_id">
     <view class="card">
-      <view style="font-weight:600">{{item.sender}}</view>
-      <view style="margin:8rpx 0">{{item.content}}</view>
-      <view style="font-size:24rpx;color:#999">{{item.created_at}}</view>
+      <view style="font-weight:600">{{item.sender_name}}</view>
+      <view style="margin:8rpx 0;white-space:pre-wrap">{{item.content}}</view>
+      <view style="font-size:24rpx;color:#999">{{item.show_time}}</view>
     </view>
   </block>
 </view>
