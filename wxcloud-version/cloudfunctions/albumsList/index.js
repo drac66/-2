@@ -15,5 +15,26 @@ exports.main = async (event) => {
   if (!openid) return { success: false, message: 'unauthorized', data: null };
 
   const r = await db.collection('albums').orderBy('created_at', 'desc').limit(100).get();
-  return { success: true, message: 'ok', data: r.data || [] };
+  const rows = r.data || [];
+
+  const ownerIds = [...new Set(rows.map((it) => it.owner).filter(Boolean))];
+  const nameMap = {};
+
+  await Promise.all(ownerIds.map(async (id) => {
+    try {
+      const ur = await db.collection('users').where({ openid: id }).limit(1).get();
+      const u = (ur.data && ur.data[0]) || null;
+      nameMap[id] = (u && u.nickname) || id;
+    } catch (e) {
+      nameMap[id] = id;
+    }
+  }));
+
+  const data = rows.map((it) => ({
+    ...it,
+    owner_name: it.owner_name || nameMap[it.owner] || it.owner
+  }));
+
+  return { success: true, message: 'ok', data };
 };
+

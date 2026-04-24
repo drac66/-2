@@ -11,7 +11,6 @@
 
   <block wx:for="{{list}}" wx:key="_id">
     <view class="card list-gap">
-      <view class="section-title">{{item.author_name}}</view>
       <view wx:if="{{item.title}}" class="mt-8">{{item.title}}</view>
       <view class="mt-8" style="white-space:pre-wrap">{{item.content}}</view>
       <view class="meta mt-8">{{item.show_time}}</view>

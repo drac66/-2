@@ -1,5 +1,19 @@
 const app = getApp();
 
+function fmtTime(v) {
+  if (!v) return '';
+  if (typeof v === 'string') return v;
+  if (v instanceof Date) {
+    const y = v.getFullYear();
+    const m = `${v.getMonth() + 1}`.padStart(2, '0');
+    const d = `${v.getDate()}`.padStart(2, '0');
+    const hh = `${v.getHours()}`.padStart(2, '0');
+    const mm = `${v.getMinutes()}`.padStart(2, '0');
+    return `${y}-${m}-${d} ${hh}:${mm}`;
+  }
+  return `${v}`;
+}
+
 Page({
   data: { list: [], title: '', content: '', visibility: 'self' },
 
@@ -26,7 +40,12 @@ Page({
         wx.showToast({ title: ret.message || '加载失败', icon: 'none' });
         return;
       }
-      this.setData({ list: ret.data || [] });
+
+      const list = (ret.data || []).map((it) => ({
+        ...it,
+        show_time: fmtTime(it.created_at)
+      }));
+      this.setData({ list });
     } catch (e) {
       wx.showToast({ title: '加载失败(网络)', icon: 'none' });
     }
