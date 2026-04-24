@@ -1,8 +1,10 @@
-<view class="container">
+<view class="page-bg"></view>
+<view class="page-mask"></view>
+<view class="container page-shell">
   <view class="card">
     <view class="title">留言板</view>
     <input class="input" placeholder="写点想说的话..." bindinput="onInput" value="{{content}}" />
-    <button class="btn-primary" bindtap="send">发送留言</button>
+    <button class="forest-btn" bindtap="send">发送留言</button>
   </view>
 
   <block wx:for="{{list}}" wx:key="_id">

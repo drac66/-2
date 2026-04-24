@@ -1,4 +1,6 @@
-<view class="container">
+<view class="page-bg"></view>
+<view class="page-mask"></view>
+<view class="container page-shell">
   <view class="card">
     <view class="title">{{ first ? '首次登录，先设置昵称' : '修改昵称' }}</view>
     <input class="input" maxlength="20" placeholder="请输入昵称（最多20字）" bindinput="onInput" value="{{nickname}}" />

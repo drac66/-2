@@ -1,9 +1,11 @@
-<view class="container">
+<view class="page-bg"></view>
+<view class="page-mask"></view>
+<view class="container page-shell">
   <view class="card">
     <view class="title">相册</view>
     <input class="input" placeholder="写一句备注（可选）" bindinput="onNoteInput" value="{{note}}" />
-    <button class="btn-primary mb-12" bindtap="chooseImage">上传图片</button>
-    <button class="btn-soft" bindtap="chooseVideo">上传视频</button>
+    <button class="forest-btn mb-12" bindtap="chooseImage">上传图片</button>
+    <button class="forest-btn" bindtap="chooseVideo">上传视频</button>
   </view>
 
   <block wx:for="{{list}}" wx:key="id">

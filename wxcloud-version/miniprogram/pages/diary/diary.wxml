@@ -1,4 +1,6 @@
-<view class="container">
+<view class="page-bg"></view>
+<view class="page-mask"></view>
+<view class="container page-shell">
   <view class="card">
     <view class="title">日记</view>
     <input class="input" placeholder="标题（可选）" bindinput="onTitle" value="{{title}}" />
@@ -6,7 +8,7 @@
     <picker mode="selector" range="{{['仅自己可见','双方可见']}}" bindchange="onVisibility" value="{{visibility==='self'?0:1}}">
       <view class="input">可见性：{{visibility==='self'?'仅自己可见':'双方可见'}}</view>
     </picker>
-    <button class="btn-primary" bindtap="save">保存日记</button>
+    <button class="forest-btn" bindtap="save">保存日记</button>
   </view>
 
   <block wx:for="{{list}}" wx:key="_id">

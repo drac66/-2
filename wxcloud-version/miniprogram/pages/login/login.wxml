@@ -1,4 +1,6 @@
-<view class="container">
+<view class="page-bg"></view>
+<view class="page-mask"></view>
+<view class="container page-shell">
   <view class="surface">
     <view class="hero-title">欢迎回来</view>
     <view class="hero-subtitle">只给我们俩的小角落</view>
