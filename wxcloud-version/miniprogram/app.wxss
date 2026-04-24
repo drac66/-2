@@ -1,10 +1,11 @@
 page {
-  background-color: #d9f4de;
-  background-image: url('/assets/wallpaper.jpg');
+  background-color: #eaf7ff;
+  /* 关键修复：用相对路径，避免 /assets 在部分环境不生效 */
+  background-image: url('./assets/wallpaper.jpg');
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
-  color: #153524;
+  color: #1f2d3d;
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
 
@@ -12,26 +13,26 @@ page {
   padding: 24rpx;
 }
 
-/* 通用内容卡片：降低透明度，保证可读性 */
+/* 内容卡片：轻透，不要大绿块 */
 .card {
-  background: rgba(20, 78, 45, 0.55);
-  border: 1rpx solid rgba(220, 255, 231, 0.55);
+  background: rgba(255, 255, 255, 0.38);
+  border: 1rpx solid rgba(255, 255, 255, 0.66);
   border-radius: 24rpx;
   padding: 24rpx;
   margin-bottom: 20rpx;
-  box-shadow: 0 10rpx 24rpx rgba(10, 46, 26, 0.22);
+  box-shadow: 0 10rpx 24rpx rgba(31, 79, 122, 0.16);
 }
 
-/* 首页顶部天空区 */
+/* 首页天空区 */
 .surface {
   position: relative;
   overflow: hidden;
   border-radius: 32rpx;
   padding: 28rpx 26rpx;
   margin-bottom: 22rpx;
-  background: linear-gradient(180deg, rgba(55, 175, 255, 0.95), rgba(132, 224, 255, 0.9));
-  border: 1rpx solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 14rpx 30rpx rgba(37, 116, 180, 0.24);
+  background: linear-gradient(180deg, rgba(48, 182, 255, 0.9), rgba(130, 230, 255, 0.84));
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 14rpx 30rpx rgba(35, 114, 177, 0.2);
 }
 
 .cloud {
@@ -40,13 +41,12 @@ page {
   border-radius: 999rpx;
 }
 
-.cloud-a { width: 130rpx; height: 50rpx; top: 24rpx; right: 26rpx; }
-.cloud-a-1 { width: 52rpx; height: 52rpx; top: 2rpx; right: 42rpx; }
-.cloud-a-2 { width: 48rpx; height: 48rpx; top: 6rpx; right: 84rpx; }
-
-.cloud-b { width: 108rpx; height: 40rpx; top: 86rpx; right: 136rpx; opacity: 0.88; }
-.cloud-b-1 { width: 40rpx; height: 40rpx; top: 66rpx; right: 154rpx; opacity: 0.88; }
-.cloud-b-2 { width: 36rpx; height: 36rpx; top: 70rpx; right: 188rpx; opacity: 0.88; }
+.cloud-a { width: 126rpx; height: 48rpx; top: 24rpx; right: 24rpx; }
+.cloud-a-1 { width: 52rpx; height: 52rpx; top: 0rpx; right: 44rpx; }
+.cloud-a-2 { width: 46rpx; height: 46rpx; top: 4rpx; right: 82rpx; }
+.cloud-b { width: 102rpx; height: 38rpx; top: 84rpx; right: 134rpx; opacity: 0.88; }
+.cloud-b-1 { width: 40rpx; height: 40rpx; top: 64rpx; right: 152rpx; opacity: 0.88; }
+.cloud-b-2 { width: 34rpx; height: 34rpx; top: 70rpx; right: 186rpx; opacity: 0.88; }
 
 .hero-title {
   position: relative;
@@ -55,7 +55,7 @@ page {
   font-weight: 700;
   color: #ffffff;
   line-height: 1.35;
-  text-shadow: 0 4rpx 10rpx rgba(25, 98, 150, 0.28);
+  text-shadow: 0 4rpx 10rpx rgba(27, 94, 153, 0.24);
 }
 
 .hero-subtitle {
@@ -63,7 +63,7 @@ page {
   z-index: 2;
   margin-top: 10rpx;
   font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .title {
@@ -71,7 +71,7 @@ page {
   font-weight: 700;
   margin-bottom: 20rpx;
   color: #ffffff;
-  text-shadow: 0 3rpx 8rpx rgba(0, 0, 0, 0.28);
+  text-shadow: 0 3rpx 8rpx rgba(22, 64, 103, 0.28);
 }
 
 .section-title {
@@ -83,51 +83,54 @@ page {
 
 .meta {
   font-size: 24rpx;
-  color: rgba(241, 255, 245, 0.95);
+  color: rgba(255, 255, 255, 0.95);
 }
 
-/* 通用按钮 */
+/* 常规按钮：回到你更喜欢的渐变（非绿色块） */
 .btn-primary {
-  background: rgba(37, 137, 80, 0.75);
+  background: linear-gradient(135deg, rgba(96, 194, 255, 0.92), rgba(122, 233, 204, 0.9), rgba(255, 178, 223, 0.9));
   color: #ffffff;
-  border: 1rpx solid rgba(225, 255, 231, 0.58);
+  border: 1rpx solid rgba(255, 255, 255, 0.72);
   border-radius: 999rpx;
   font-weight: 700;
+  box-shadow: 0 8rpx 20rpx rgba(62, 134, 184, 0.2);
 }
 
 .btn-soft {
-  background: rgba(23, 102, 58, 0.58);
+  background: rgba(116, 199, 255, 0.45);
   color: #ffffff;
-  border: 1rpx solid rgba(225, 255, 231, 0.5);
+  border: 1rpx solid rgba(255, 255, 255, 0.68);
   border-radius: 999rpx;
 }
 
-/* 首页四大入口：森林风 + 可读 */
+/* 首页4个入口：森林感轮廓 + 渐变，不再是大绿块 */
 .forest-btn {
   height: 88rpx;
   line-height: 88rpx;
-  background: linear-gradient(180deg, rgba(95, 195, 118, 0.7), rgba(52, 150, 83, 0.68));
+  background:
+    linear-gradient(135deg, rgba(123, 227, 168, 0.35), rgba(101, 195, 255, 0.36), rgba(255, 191, 227, 0.34)),
+    rgba(255, 255, 255, 0.18);
   color: #ffffff;
-  border: 1rpx solid rgba(230, 255, 236, 0.65);
+  border: 1rpx solid rgba(235, 255, 241, 0.8);
   border-radius: 999rpx;
   font-size: 34rpx;
   font-weight: 700;
   letter-spacing: 1rpx;
-  text-shadow: 0 3rpx 8rpx rgba(16, 70, 38, 0.45);
-  box-shadow: 0 10rpx 22rpx rgba(15, 64, 35, 0.28);
+  text-shadow: 0 3rpx 8rpx rgba(20, 77, 52, 0.34);
+  box-shadow: 0 10rpx 20rpx rgba(33, 94, 137, 0.18);
 }
 
 .input {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.82);
   border-radius: 14rpx;
-  border: 1rpx solid rgba(226, 255, 235, 0.75);
+  border: 1rpx solid rgba(234, 246, 255, 0.95);
   padding: 16rpx;
   margin-bottom: 16rpx;
-  color: #133a25;
+  color: #1f3750;
 }
 
 .input::placeholder {
-  color: rgba(45, 95, 67, 0.6);
+  color: rgba(74, 106, 135, 0.6);
 }
 
 .list-gap { margin-top: 8rpx; }
