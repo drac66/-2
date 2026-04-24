@@ -51,7 +51,13 @@ Page({
         }, 250);
       }
     } catch (e) {
-      wx.showToast({ title: '保存失败，请重试', icon: 'none' });
+      const msg = (e && (e.errMsg || e.message)) || '';
+      if (msg.includes('timeout')) {
+        wx.showToast({ title: '保存超时，请先上传云函数', icon: 'none' });
+      } else {
+        wx.showToast({ title: '保存失败，请重试', icon: 'none' });
+      }
+      console.error('[settings.saveNickname] failed:', e);
     } finally {
       wx.hideLoading();
       this.setData({ saving: false });
