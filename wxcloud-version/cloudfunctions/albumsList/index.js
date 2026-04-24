@@ -3,16 +3,22 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
-async function auth(token) {
-  if (!token) return null;
-  // 开发阶段：token 直接视为 openid
-  return token;
+const ALLOWED = {
+  odwpk3URVeGOtpsBIALGCfDxnAu0: 'owner',
+  odwpk3XulKP3Bq5AdkJRzn42Oabs: 'partner'
+};
+
+function auth() {
+  const { OPENID } = cloud.getWXContext();
+  if (!OPENID) return null;
+  const role = ALLOWED[OPENID] || '';
+  if (!role) return null;
+  return { openid: OPENID, role };
 }
 
-exports.main = async (event) => {
-  const { token } = event || {};
-  const openid = await auth(token);
-  if (!openid) return { success: false, message: 'unauthorized', data: null };
+exports.main = async () => {
+  const userAuth = auth();
+  if (!userAuth) return { success: false, message: 'unauthorized', data: null };
 
   const r = await db.collection('albums').orderBy('created_at', 'desc').limit(100).get();
   const rows = r.data || [];
@@ -37,4 +43,3 @@ exports.main = async (event) => {
 
   return { success: true, message: 'ok', data };
 };
-

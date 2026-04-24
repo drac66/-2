@@ -3,19 +3,30 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
-function auth(token) {
-  return token || null; // 开发阶段 token=openid
+const ALLOWED = {
+  odwpk3URVeGOtpsBIALGCfDxnAu0: 'owner',
+  odwpk3XulKP3Bq5AdkJRzn42Oabs: 'partner'
+};
+
+function auth() {
+  const { OPENID } = cloud.getWXContext();
+  if (!OPENID) return null;
+  const role = ALLOWED[OPENID] || '';
+  if (!role) return null;
+  return { openid: OPENID, role };
 }
 
 exports.main = async (event) => {
-  const { action, token, nickname } = event || {};
-  const openid = auth(token);
-  if (!openid) return { success: false, message: 'unauthorized', data: null };
+  const { action, nickname } = event || {};
+  const userAuth = auth();
+  if (!userAuth) return { success: false, message: 'unauthorized', data: null };
+
+  const { openid, role } = userAuth;
 
   if (action === 'get') {
     const r = await db.collection('users').where({ openid }).limit(1).get();
     const user = (r.data && r.data[0]) || null;
-    return { success: true, message: 'ok', data: { nickname: user?.nickname || '' } };
+    return { success: true, message: 'ok', data: { nickname: user?.nickname || '', role } };
   }
 
   const name = (nickname || '').trim();
@@ -29,14 +40,15 @@ exports.main = async (event) => {
     await db.collection('users').add({
       data: {
         openid,
+        role,
         nickname: name,
         created_at: new Date(),
         updated_at: new Date()
       }
     });
   } else {
-    await db.collection('users').doc(user._id).update({ data: { nickname: name, updated_at: new Date() } });
+    await db.collection('users').doc(user._id).update({ data: { role, nickname: name, updated_at: new Date() } });
   }
 
-  return { success: true, message: 'ok', data: { nickname: name } };
+  return { success: true, message: 'ok', data: { nickname: name, role } };
 };

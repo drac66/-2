@@ -3,22 +3,38 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
-async function auth(token) {
-  if (!token) return null;
-  // 开发阶段：token 直接视为 openid
-  return token;
+const ALLOWED = {
+  odwpk3URVeGOtpsBIALGCfDxnAu0: 'owner',
+  odwpk3XulKP3Bq5AdkJRzn42Oabs: 'partner'
+};
+
+function auth() {
+  const { OPENID } = cloud.getWXContext();
+  if (!OPENID) return null;
+  const role = ALLOWED[OPENID] || '';
+  if (!role) return null;
+  return { openid: OPENID, role };
+}
+
+async function getNickname(openid) {
+  const r = await db.collection('users').where({ openid }).limit(1).get();
+  const u = (r.data && r.data[0]) || null;
+  return (u && u.nickname) || '未命名用户';
 }
 
 exports.main = async (event) => {
-  const { token, cloudPath, mediaType, note } = event || {};
-  const openid = await auth(token);
-  if (!openid) return { success: false, message: 'unauthorized', data: null };
+  const { cloudPath, mediaType, note } = event || {};
+  const userAuth = auth();
+  if (!userAuth) return { success: false, message: 'unauthorized', data: null };
   if (!cloudPath) return { success: false, message: 'cloudPath required', data: null };
 
+  const { openid } = userAuth;
   const type = mediaType === 'video' ? 'video' : 'image';
+  const nickname = await getNickname(openid);
   const r = await db.collection('albums').add({
     data: {
       owner: openid,
+      owner_name: nickname,
       media_type: type,
       media_url: cloudPath,
       note: (note || '').trim(),
