@@ -1,7 +1,11 @@
 <view class="container">
   <view class="surface">
     <view class="cloud cloud-a"></view>
+    <view class="cloud cloud-a-1"></view>
+    <view class="cloud cloud-a-2"></view>
     <view class="cloud cloud-b"></view>
+    <view class="cloud cloud-b-1"></view>
+    <view class="cloud cloud-b-2"></view>
     <view class="hero-title">🌿 我们的小森林</view>
     <view class="hero-subtitle">天空晴朗，慢慢逛我们的角落</view>
   </view>
