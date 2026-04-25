@@ -128,6 +128,11 @@ function stripUrls(text) {
   return String(text || '').replace(/https?:\/\/[^\s]+/g, '【链接已隐藏，请点下方文件卡片】');
 }
 
+function firstUrl(text) {
+  const m = String(text || '').match(/https?:\/\/[^\s]+/);
+  return m ? m[0] : '';
+}
+
 async function getNickname(openid) {
   try {
     const r = await db.collection('users').where({ openid }).limit(1).get();
@@ -357,14 +362,19 @@ exports.main = async (event) => {
   }
 
   const answerRaw = (((resp.data || {}).choices || [])[0] || {}).message?.content || '（无回复）';
+  const rawUrl = firstUrl(answerRaw);
   const answer = stripUrls(answerRaw);
+
+  const assistantFiles = rawUrl
+    ? [{ fileID: '', tempFileURL: rawUrl, name: '文件（点我打开）' }]
+    : [];
 
   await db.collection('ai_messages').add({
     data: {
       owner: openid,
       role: 'assistant',
       content: answer,
-      files: [],
+      files: assistantFiles,
       created_at: new Date()
     }
   });
