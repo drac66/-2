@@ -92,8 +92,19 @@ function extractDirectFileIntent(text) {
   const trigger = /(发|生成|做|给我).*(文件|文档|word|docx|pdf)/i.test(s);
   if (!trigger) return null;
 
-  const contentMatch = s.match(/内容(?:为|是|：|:)\s*([\s\S]+)$/i);
-  const content = contentMatch ? contentMatch[1].trim() : '';
+  // 支持：内容为xxx / 内容是xxx / 内容仅“xxx” / 内容:xxx
+  let content = '';
+  const contentMatch = s.match(/内容(?:为|是|仅|：|:)\s*([\s\S]+)$/i);
+  if (contentMatch) {
+    content = String(contentMatch[1] || '').trim();
+  }
+
+  // 优先提取中文引号/英文引号中的内容
+  if (!content) {
+    const quote = s.match(/[“"']([^“”"'\n]{1,200})[”"']/);
+    if (quote) content = String(quote[1] || '').trim();
+  }
+
   if (!content) return null;
 
   const nameMatch = s.match(/(?:名字|文件名)(?:叫|为|是|：|:)\s*([^\n，。,.]+)/i);
