@@ -37,6 +37,52 @@ Page({
     this.send();
   },
 
+  onMessageLongPress(e) {
+    const role = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.role) || '';
+    const text = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.text) || '';
+    if (role !== 'assistant' || !text) return;
+
+    wx.setClipboardData({
+      data: text,
+      success: () => wx.showToast({ title: '已复制GPT内容', icon: 'success' }),
+      fail: () => wx.showToast({ title: '复制失败', icon: 'none' })
+    });
+  },
+
+  async exportAsFile(e) {
+    const text = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.text) || '';
+    const format = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.format) || 'txt';
+    if (!text) {
+      wx.showToast({ title: '没有可导出的内容', icon: 'none' });
+      return;
+    }
+
+    try {
+      this.showBusy('生成文件中...');
+      const token = app.globalData.token || wx.getStorageSync('token') || '';
+      const res = await wx.cloud.callFunction({
+        name: 'aiChat',
+        data: {
+          action: 'exportTxt',
+          token,
+          text,
+          format
+        }
+      });
+      const ret = res.result || {};
+      if (!ret.success) {
+        wx.showToast({ title: ret.message || '生成失败', icon: 'none' });
+        return;
+      }
+      wx.showToast({ title: '文件已发送', icon: 'success' });
+      await this.loadList();
+    } catch (err) {
+      wx.showToast({ title: '生成失败', icon: 'none' });
+    } finally {
+      this.hideBusy();
+    }
+  },
+
   scrollToBottom() {
     // 先清空再设置同一锚点，确保重复消息也能触发滚动
     this.setData({ scrollIntoView: '' });

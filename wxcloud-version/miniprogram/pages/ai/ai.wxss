@@ -57,6 +57,16 @@
   font-size: 24rpx;
 }
 
+.assistant-actions {
+  margin-top: 8rpx;
+}
+
+.action-link {
+  color: #2f80ed;
+  font-size: 22rpx;
+  margin-right: 18rpx;
+}
+
 .pending-box {
   padding: 12rpx;
   border-radius: 14rpx;

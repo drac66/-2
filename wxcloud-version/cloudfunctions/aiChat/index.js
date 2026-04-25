@@ -1,6 +1,7 @@
 // aiChat 云函数
 const cloud = require('wx-server-sdk');
 const https = require('https');
+const { Document, Packer, Paragraph, TextRun } = require('docx');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -94,43 +95,41 @@ async function buildFileHints(fileIDs) {
   }));
 }
 
-async function refreshMessageFiles(rows) {
-  const allFileIDs = [];
-  (rows || []).forEach((m) => {
-    (m.files || []).forEach((f) => {
-      if (f && f.fileID) allFileIDs.push(f.fileID);
+async function createTextFile(openid, text, ext = 'txt') {
+  const body = String(text || '').trim();
+  if (!body) throw new Error('empty text');
+
+  const now = Date.now();
+  const safeExt = (ext || 'txt').toLowerCase() === 'docx' ? 'docx' : 'txt';
+  const filename = `gpt_reply_${now}.${safeExt}`;
+  const cloudPath = `ai-output/${openid}/${filename}`;
+
+  let fileContent;
+  if (safeExt === 'docx') {
+    const lines = body.split(/\r?\n/);
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: lines.map((line) => new Paragraph({ children: [new TextRun(line || ' ')] }))
+      }]
     });
-  });
-
-  const uniq = [...new Set(allFileIDs)];
-  if (!uniq.length) return rows || [];
-
-  let tempMap = {};
-  try {
-    const temp = await cloud.getTempFileURL({ fileList: uniq });
-    tempMap = (temp.fileList || []).reduce((acc, it) => {
-      acc[it.fileID] = it.tempFileURL || '';
-      return acc;
-    }, {});
-  } catch (e) {
-    tempMap = {};
+    fileContent = await Packer.toBuffer(doc);
+  } else {
+    fileContent = Buffer.from(body, 'utf8');
   }
 
-  return (rows || []).map((m) => ({
-    ...m,
-    files: (m.files || []).map((f) => ({
-      ...f,
-      name: f.name || guessNameFromFileID(f.fileID),
-      tempFileURL: tempMap[f.fileID] || f.tempFileURL || ''
-    }))
-  }));
+  const up = await cloud.uploadFile({ cloudPath, fileContent });
+  const fileID = up.fileID;
+  const temp = await cloud.getTempFileURL({ fileList: [fileID] });
+  const tempUrl = ((temp.fileList || [])[0] || {}).tempFileURL || '';
+
+  return { fileID, tempFileURL: tempUrl, name: filename };
 }
 
-exports.main = async (event) => {
   const userAuth = auth();
   if (!userAuth) return { success: false, message: 'unauthorized', data: null };
 
-  const { action = 'chat', message = '', fileIDs = [], text = '', filename = '' } = event || {};
+  const { action = 'chat', message = '', fileIDs = [], text = '', filename = '', format = '' } = event || {};
   const { openid } = userAuth;
 
   if (action === 'list') {
@@ -143,25 +142,20 @@ exports.main = async (event) => {
     const body = String(text || '').trim();
     if (!body) return { success: false, message: 'text required', data: null };
 
-    const safeName = (filename || `gpt_${Date.now()}.txt`).replace(/[\\/:*?"<>|]/g, '_');
-    const cloudPath = `ai-output/${openid}/${Date.now()}_${safeName.endsWith('.txt') ? safeName : `${safeName}.txt`}`;
-    const up = await cloud.uploadFile({ cloudPath, fileContent: Buffer.from(body, 'utf8') });
-    const fileID = up.fileID;
-    const temp = await cloud.getTempFileURL({ fileList: [fileID] });
-    const tempUrl = ((temp.fileList || [])[0] || {}).tempFileURL || '';
+    const ext = String(format || '').toLowerCase() === 'docx' ? 'docx' : 'txt';
+    const file = await createTextFile(openid, body, ext);
 
-    const files = [{ fileID, tempFileURL: tempUrl, name: safeName.endsWith('.txt') ? safeName : `${safeName}.txt` }];
     await db.collection('ai_messages').add({
       data: {
         owner: openid,
         role: 'assistant',
-        content: '已生成文本文件，可点击下方文件卡片打开/下载。',
-        files,
+        content: `已生成${ext.toUpperCase()}文件，可点击下方文件卡片打开/下载。`,
+        files: [file],
         created_at: new Date()
       }
     });
 
-    return { success: true, message: 'ok', data: { fileID, tempFileURL: tempUrl, name: files[0].name } };
+    return { success: true, message: 'ok', data: file };
   }
 
   const userText = String(message || '').trim();
