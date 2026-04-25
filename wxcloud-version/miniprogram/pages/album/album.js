@@ -205,6 +205,53 @@ Page({
     });
   },
 
+  onImageLongPress(e) {
+    const src = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.src) || '';
+    if (!src) return;
+
+    wx.showActionSheet({
+      itemList: ['保存到相册'],
+      success: (res) => {
+        if (res.tapIndex === 0) this.saveImageToAlbum(src);
+      }
+    });
+  },
+
+  saveImageToAlbum(src) {
+    const doSave = (filePath) => {
+      wx.saveImageToPhotosAlbum({
+        filePath,
+        success: () => wx.showToast({ title: '已保存到相册', icon: 'success' }),
+        fail: (err) => {
+          console.warn('saveImageToPhotosAlbum fail', err);
+          if (err && /auth deny|authorize no response|denied/i.test(err.errMsg || '')) {
+            wx.showModal({
+              title: '需要相册权限',
+              content: '请在设置中允许“保存到相册”权限后再试。',
+              success: (m) => {
+                if (m.confirm) wx.openSetting({});
+              }
+            });
+          } else {
+            wx.showToast({ title: '保存失败', icon: 'none' });
+          }
+        }
+      });
+    };
+
+    wx.downloadFile({
+      url: src,
+      success: (res) => {
+        if (res.statusCode === 200 && res.tempFilePath) {
+          doSave(res.tempFilePath);
+        } else {
+          wx.showToast({ title: '下载图片失败', icon: 'none' });
+        }
+      },
+      fail: () => wx.showToast({ title: '下载图片失败', icon: 'none' })
+    });
+  },
+
   onShow() {
     this.loadList();
   },
@@ -213,4 +260,5 @@ Page({
     this.loadList(true).finally(() => wx.stopPullDownRefresh());
   }
 });
+
 

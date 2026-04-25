@@ -26,6 +26,7 @@
         src="{{item.media_url}}"
         data-src="{{item.media_url}}"
         bindtap="previewImage"
+        bindlongpress="onImageLongPress"
         style="width:100%;margin-top:12rpx;border-radius:14rpx"
       />
       <video wx:if="{{item.media_type==='video'}}" src="{{item.media_url}}" controls style="width:100%;margin-top:12rpx;border-radius:14rpx" />
