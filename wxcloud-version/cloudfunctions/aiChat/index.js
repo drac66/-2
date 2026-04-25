@@ -85,6 +85,29 @@ function guessNameFromFileID(fileID) {
   return part.replace(/^\d+_/, '') || part;
 }
 
+function extractDirectFileIntent(text) {
+  const s = String(text || '').trim();
+  if (!s) return null;
+
+  // 触发词：发文件/发word/发pdf/生成文件
+  const trigger = /(发|生成).*(文件|word|docx|pdf)/i.test(s);
+  if (!trigger) return null;
+
+  // 内容：内容为xxx / 内容是xxx
+  const contentMatch = s.match(/内容(?:为|是)\s*([\s\S]+)$/i);
+  const content = contentMatch ? contentMatch[1].trim() : '';
+  if (!content) return null;
+
+  // 文件名：名字叫xxx / 文件名为xxx
+  const nameMatch = s.match(/(?:名字|文件名)(?:叫|为)\s*([^\n，。,.]+)/i);
+  const filename = nameMatch ? nameMatch[1].trim() : '';
+
+  // 格式：优先识别 pdf，否则默认为 docx
+  const format = /pdf/i.test(s) ? 'pdf' : 'docx';
+
+  return { content, filename, format };
+}
+
 function sanitizeBaseName(name) {
   const base = String(name || '').trim().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
   return base.slice(0, 64);
@@ -171,7 +194,12 @@ async function createTextFile(openid, text, ext = 'txt', customBaseName = '') {
   if (!body) throw new Error('empty text');
 
   const reqExt = String(ext || 'docx').toLowerCase();
-  const safeExt = reqExt === 'pdf' ? 'pdf' : (reqExt === 'docx' ? 'docx' : 'docx');
+  let safeExt = reqExt === 'pdf' ? 'pdf' : (reqExt === 'docx' ? 'docx' : 'docx');
+
+  // PDF 中文兼容问题：自动回退为 DOCX，避免乱码
+  if (safeExt === 'pdf' && /[\u3400-\u9FFF]/.test(body)) {
+    safeExt = 'docx';
+  }
 
   let baseName = sanitizeBaseName(customBaseName);
   if (!baseName) {
@@ -256,6 +284,25 @@ exports.main = async (event) => {
       created_at: new Date()
     }
   });
+
+  // 直出文件意图：不走模型自由发挥，按用户内容原样生成
+  const directIntent = extractDirectFileIntent(userText);
+  if (directIntent) {
+    const file = await createTextFile(openid, directIntent.content, directIntent.format, directIntent.filename);
+    const ext = file.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'WORD';
+
+    await db.collection('ai_messages').add({
+      data: {
+        owner: openid,
+        role: 'assistant',
+        content: `已按你的要求生成${ext}文件：${file.name}`,
+        files: [file],
+        created_at: new Date()
+      }
+    });
+
+    return { success: true, message: 'ok', data: { reply: `已生成文件：${file.name}` } };
+  }
 
   const baseUrl = process.env.AI_BASE_URL || 'https://cmdme.cn';
   const apiKey = process.env.AI_API_KEY || '';
