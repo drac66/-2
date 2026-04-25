@@ -201,7 +201,8 @@ Page({
     if (!current) return;
     wx.previewImage({
       current,
-      urls: urls.length ? urls : [current]
+      urls: urls.length ? urls : [current],
+      showmenu: true
     });
   },
 
