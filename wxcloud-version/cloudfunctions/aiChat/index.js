@@ -85,6 +85,28 @@ function guessNameFromFileID(fileID) {
   return part.replace(/^\d+_/, '') || part;
 }
 
+function sanitizeBaseName(name) {
+  const base = String(name || '').trim().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+  return base.slice(0, 64);
+}
+
+function hhmmNow() {
+  const d = new Date();
+  const hh = `${d.getHours()}`.padStart(2, '0');
+  const mm = `${d.getMinutes()}`.padStart(2, '0');
+  return `${hh}${mm}`;
+}
+
+async function getNickname(openid) {
+  try {
+    const r = await db.collection('users').where({ openid }).limit(1).get();
+    const u = (r.data && r.data[0]) || null;
+    return (u && u.nickname) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
 async function buildFileHints(fileIDs) {
   if (!Array.isArray(fileIDs) || !fileIDs.length) return [];
   const temp = await cloud.getTempFileURL({ fileList: fileIDs });
@@ -144,15 +166,21 @@ async function buildPdfBuffer(text) {
   });
 }
 
-async function createTextFile(openid, text, ext = 'txt') {
+async function createTextFile(openid, text, ext = 'txt', customBaseName = '') {
   const body = String(text || '').trim();
   if (!body) throw new Error('empty text');
 
-  const now = Date.now();
   const reqExt = String(ext || 'docx').toLowerCase();
   const safeExt = reqExt === 'pdf' ? 'pdf' : (reqExt === 'docx' ? 'docx' : 'docx');
-  const filename = `gpt_reply_${now}.${safeExt}`;
-  const cloudPath = `ai-output/${openid}/${filename}`;
+
+  let baseName = sanitizeBaseName(customBaseName);
+  if (!baseName) {
+    const nick = sanitizeBaseName(await getNickname(openid)) || '用户';
+    baseName = `${nick}_${hhmmNow()}`;
+  }
+
+  const filename = `${baseName}.${safeExt}`;
+  const cloudPath = `ai-output/${openid}/${Date.now()}_${filename}`;
 
   let fileContent;
   if (safeExt === 'docx') {
@@ -182,7 +210,7 @@ exports.main = async (event) => {
   const userAuth = auth();
   if (!userAuth) return { success: false, message: 'unauthorized', data: null };
 
-  const { action = 'chat', message = '', fileIDs = [], text = '', format = '' } = event || {};
+  const { action = 'chat', message = '', fileIDs = [], text = '', format = '', filename = '' } = event || {};
   const { openid } = userAuth;
 
   if (action === 'list') {
@@ -197,7 +225,7 @@ exports.main = async (event) => {
 
     const reqFormat = String(format || '').toLowerCase();
     const ext = reqFormat === 'pdf' ? 'pdf' : 'docx';
-    const file = await createTextFile(openid, body, ext);
+    const file = await createTextFile(openid, body, ext, filename);
 
     await db.collection('ai_messages').add({
       data: {

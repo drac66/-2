@@ -53,30 +53,41 @@ Page({
       return;
     }
 
-    try {
-      this.showBusy('生成文件中...');
-      const token = app.globalData.token || wx.getStorageSync('token') || '';
-      const res = await wx.cloud.callFunction({
-        name: 'aiChat',
-        data: {
-          action: 'exportTxt',
-          token,
-          text,
-          format
+    wx.showModal({
+      title: '文件名',
+      editable: true,
+      placeholderText: '留空则自动用：用户名+时分',
+      success: async (m) => {
+        if (!m.confirm) return;
+        const filename = (m.content || '').trim();
+
+        try {
+          this.showBusy('生成文件中...');
+          const token = app.globalData.token || wx.getStorageSync('token') || '';
+          const res = await wx.cloud.callFunction({
+            name: 'aiChat',
+            data: {
+              action: 'exportTxt',
+              token,
+              text,
+              format,
+              filename
+            }
+          });
+          const ret = res.result || {};
+          if (!ret.success) {
+            wx.showToast({ title: ret.message || '生成失败', icon: 'none' });
+            return;
+          }
+          wx.showToast({ title: '文件已发送', icon: 'success' });
+          await this.loadList();
+        } catch (err) {
+          wx.showToast({ title: '生成失败', icon: 'none' });
+        } finally {
+          this.hideBusy();
         }
-      });
-      const ret = res.result || {};
-      if (!ret.success) {
-        wx.showToast({ title: ret.message || '生成失败', icon: 'none' });
-        return;
       }
-      wx.showToast({ title: '文件已发送', icon: 'success' });
-      await this.loadList();
-    } catch (err) {
-      wx.showToast({ title: '生成失败', icon: 'none' });
-    } finally {
-      this.hideBusy();
-    }
+    });
   },
 
   scrollToBottom() {
