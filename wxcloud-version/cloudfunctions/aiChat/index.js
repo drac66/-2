@@ -117,6 +117,13 @@ function sanitizeBaseName(name) {
   return base.slice(0, 64);
 }
 
+function hhmmNow() {
+  const d = new Date();
+  const hh = `${d.getHours()}`.padStart(2, '0');
+  const mm = `${d.getMinutes()}`.padStart(2, '0');
+  return `${hh}${mm}`;
+}
+
 function stripUrls(text) {
   return String(text || '').replace(/https?:\/\/[^\s]+/g, '【链接已隐藏，请点下方文件卡片】');
 }
