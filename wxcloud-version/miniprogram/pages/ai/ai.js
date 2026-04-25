@@ -1,7 +1,13 @@
 const app = getApp();
 
 function timeText(v) {
+  const d = new Date(v || Date.now());
+  const hh = `${d.getHours()}`.padStart(2, '0');
+  const mm = `${d.getMinutes()}`.padStart(2, '0');
+  return `${hh}:${mm}`;
+}
 
+Page({
   data: {
     input: '',
     list: [],
@@ -11,13 +17,8 @@ function timeText(v) {
     scrollIntoView: 'chat-bottom-anchor'
   },
 
-  showBusy() {
-    // 不再使用全局 showLoading，避免与页面其他流程冲突导致配对警告
-  },
-
-  hideBusy() {
-    // no-op
-  },
+  showBusy() {},
+  hideBusy() {},
 
   onInput(e) {
     this.setData({ input: e.detail.value || '' });
@@ -40,13 +41,9 @@ function timeText(v) {
   },
 
   scrollToBottom() {
-    // 先清空再设置同一锚点，确保重复消息也能触发滚动
     this.setData({ scrollIntoView: '' });
-    setTimeout(() => {
-      this.setData({ scrollIntoView: 'chat-bottom-anchor' });
-    }, 30);
+    setTimeout(() => this.setData({ scrollIntoView: 'chat-bottom-anchor' }), 30);
   },
-
 
   async loadList() {
     const token = app.globalData.token || wx.getStorageSync('token') || '';
@@ -57,10 +54,7 @@ function timeText(v) {
         wx.showToast({ title: ret.message || '加载失败', icon: 'none' });
         return;
       }
-      const list = (ret.data || []).map((it) => ({
-        ...it,
-        show_time: timeText(it.created_at)
-      }));
+      const list = (ret.data || []).map((it) => ({ ...it, show_time: timeText(it.created_at) }));
       this.setData({ list });
       this.scrollToBottom();
     } catch (e) {
@@ -81,7 +75,6 @@ function timeText(v) {
           const files = (r.tempFiles || []).filter((f) => f && f.path);
           if (!files.length) return;
 
-          this.showBusy('上传文件中...');
           const uploaded = [];
           for (const f of files) {
             const cloudPath = `ai-input/${Date.now()}_${Math.random().toString(16).slice(2)}_${f.name || 'file'}`;
@@ -89,13 +82,11 @@ function timeText(v) {
             uploaded.push({ fileID: up.fileID, name: f.name || '文件' });
           }
 
-          const next = [...this.data.pendingFiles, ...uploaded];
-          this.setData({ pendingFiles: next });
+          this.setData({ pendingFiles: [...this.data.pendingFiles, ...uploaded] });
           wx.showToast({ title: `已加入${uploaded.length}个文件`, icon: 'success' });
         } catch (e) {
           wx.showToast({ title: '上传失败', icon: 'none' });
         } finally {
-          this.hideBusy();
           this.setData({ uploading: false });
         }
       },
@@ -120,25 +111,21 @@ function timeText(v) {
     let url = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.url) || '';
     const fileID = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.fileid) || '';
 
-    // 优先走云存储 fileID 直下，稳定性更高
     if (fileID) {
       try {
         const d = await wx.cloud.downloadFile({ fileID });
-        const p = (d && d.tempFilePath) || '';
-        if (p) {
-          wx.openDocument({ filePath: p, showMenu: true });
+        if (d && d.tempFilePath) {
+          wx.openDocument({ filePath: d.tempFilePath, showMenu: true });
           return;
         }
-      } catch (err) {
-        // 继续走临时链接兜底
-      }
+      } catch (_) {}
     }
 
     if (!url && fileID) {
       try {
         const t = await wx.cloud.getTempFileURL({ fileList: [fileID] });
         url = (((t || {}).fileList || [])[0] || {}).tempFileURL || '';
-      } catch (err) {
+      } catch (_) {
         url = '';
       }
     }
@@ -151,37 +138,12 @@ function timeText(v) {
     wx.downloadFile({
       url,
       timeout: 60000,
-      success: async (res) => {
+      success: (res) => {
         if (res.statusCode === 200 && res.tempFilePath) {
           wx.openDocument({ filePath: res.tempFilePath, showMenu: true });
-          return;
+        } else {
+          this.offerRegenerate(fileID);
         }
-
-        if (fileID) {
-          try {
-            const t = await wx.cloud.getTempFileURL({ fileList: [fileID] });
-            const retryUrl = (((t || {}).fileList || [])[0] || {}).tempFileURL || '';
-            if (!retryUrl) throw new Error('no retry url');
-
-            wx.downloadFile({
-              url: retryUrl,
-              timeout: 60000,
-              success: (r2) => {
-                if (r2.statusCode === 200 && r2.tempFilePath) {
-                  wx.openDocument({ filePath: r2.tempFilePath, showMenu: true });
-                } else {
-                  this.offerRegenerate(fileID);
-                }
-              },
-              fail: () => this.offerRegenerate(fileID)
-            });
-            return;
-          } catch (err) {
-            // fall through
-          }
-        }
-
-        this.offerRegenerate(fileID);
       },
       fail: () => this.offerRegenerate(fileID)
     });
@@ -203,7 +165,7 @@ function timeText(v) {
       }
       wx.showToast({ title: '已重生成', icon: 'success' });
       await this.loadList();
-    } catch (e) {
+    } catch (_) {
       wx.showToast({ title: '重生成超时，请稍后重试', icon: 'none' });
     } finally {
       wx.hideLoading();
@@ -219,7 +181,6 @@ function timeText(v) {
 
     this.setData({ sending: true });
     try {
-      this.showBusy('思考中...');
       const token = app.globalData.token || wx.getStorageSync('token') || '';
       const res = await wx.cloud.callFunction({
         name: 'aiChat',
@@ -234,23 +195,14 @@ function timeText(v) {
 
       this.setData({ input: '', pendingFiles: [] });
       await this.loadList();
-    } catch (e) {
+    } catch (_) {
       wx.showToast({ title: '发送失败(网络)', icon: 'none' });
     } finally {
-      this.hideBusy();
       this.setData({ sending: false });
     }
   },
 
   onShow() {
     this.loadList();
-  },
-
-  onHide() {
-    this.hideBusy();
-  },
-
-  onUnload() {
-    this.hideBusy();
   }
 });
