@@ -137,6 +137,50 @@ function sanitizeGeneratedDocText(text) {
   return lines.join('\n').trim();
 }
 
+function isBadDocBody(text) {
+  const t = String(text || '').trim();
+  if (!t) return true;
+  if (t.length < 20) return true;
+  if (/https?:\/\//i.test(t)) return true;
+  if (/文件已生成|点击.*下载|链接已隐藏|用户上传文件/.test(t)) return true;
+  return false;
+}
+
+function buildEndpointCandidates(baseUrl) {
+  const base = String(baseUrl || '').replace(/\/$/, '');
+  return /\/v1$/i.test(base)
+    ? [
+      `${base}/chat/completions`,
+      `${base.replace(/\/v1$/i, '')}/v1/chat/completions`,
+      `${base.replace(/\/v1$/i, '')}/chat/completions`
+    ]
+    : [
+      `${base}/v1/chat/completions`,
+      `${base}/chat/completions`
+    ];
+}
+
+async function callChatCompletions(baseUrl, apiKey, model, messages) {
+  const endpointCandidates = buildEndpointCandidates(baseUrl);
+  let resp = null;
+  let usedEndpoint = '';
+
+  for (const ep of endpointCandidates) {
+    usedEndpoint = ep;
+    resp = await requestJsonWithRetry(
+      ep,
+      'POST',
+      { Authorization: `Bearer ${apiKey}` },
+      { model, messages, temperature: 0.7 },
+      1
+    );
+    if (resp.status !== 404) break;
+  }
+
+  return { resp, usedEndpoint };
+}
+
+
 function cleanPromptText(text) {
   return String(text || '')
     .replace(/https?:\/\/[^\s]+/g, '')
@@ -373,31 +417,7 @@ exports.main = async (event) => {
     }).filter((m) => m.content)
   ];
 
-  const base = String(baseUrl || '').replace(/\/$/, '');
-  const endpointCandidates = /\/v1$/i.test(base)
-    ? [
-      `${base}/chat/completions`,
-      `${base.replace(/\/v1$/i, '')}/v1/chat/completions`,
-      `${base.replace(/\/v1$/i, '')}/chat/completions`
-    ]
-    : [
-      `${base}/v1/chat/completions`,
-      `${base}/chat/completions`
-    ];
-
-  let resp = null;
-  let usedEndpoint = '';
-  for (const ep of endpointCandidates) {
-    usedEndpoint = ep;
-    resp = await requestJsonWithRetry(
-      ep,
-      'POST',
-      { Authorization: `Bearer ${apiKey}` },
-      { model, messages, temperature: 0.7 },
-      1
-    );
-    if (resp.status !== 404) break;
-  }
+  const { resp, usedEndpoint } = await callChatCompletions(baseUrl, apiKey, model, messages);
 
   if (!resp || resp.status < 200 || resp.status >= 300) {
     const detail = {
@@ -417,13 +437,29 @@ exports.main = async (event) => {
     ? [{ fileID: '', tempFileURL: rawUrl, name: '文件（点我打开）' }]
     : [];
 
-  // 用户明确希望“AI生成后直接给文件”时，自动把回答落成 Word 附件
+  // 自动文档模式：走文档专用二次生成，避免聊天历史污染正文
   if (autoFileMode) {
     try {
-      const autoBaseName = extractPreferredFileBaseName(userText) || '';
-      const docBody = sanitizeGeneratedDocText(answerRaw) || '（空内容）';
-      const autoFile = await createTextFile(openid, docBody, autoBaseName);
-      assistantFiles.push(autoFile);
+      const docPromptMessages = [
+        {
+          role: 'system',
+          content: '你是文档正文生成器。只输出最终正文，不要任何说明、链接、标题前缀、注释。'
+        },
+        {
+          role: 'user',
+          content: `请根据我的需求生成可直接写入Word的正文内容。需求：${cleanPromptText(userText)}`
+        }
+      ];
+
+      const { resp: docResp } = await callChatCompletions(baseUrl, apiKey, model, docPromptMessages);
+      const docRaw = (((docResp && docResp.data) || {}).choices || [])[0]?.message?.content || '';
+      const docBody = sanitizeGeneratedDocText(docRaw || answerRaw);
+
+      if (!isBadDocBody(docBody)) {
+        const autoBaseName = extractPreferredFileBaseName(userText) || '';
+        const autoFile = await createTextFile(openid, docBody, autoBaseName);
+        assistantFiles.push(autoFile);
+      }
     } catch (e) {
       // 自动落文件失败不影响文本回复
     }
