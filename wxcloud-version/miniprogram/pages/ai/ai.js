@@ -148,7 +148,7 @@ Page({
 
     wx.downloadFile({
       url,
-      timeout: 25000,
+      timeout: 60000,
       success: async (res) => {
         if (res.statusCode === 200 && res.tempFilePath) {
           wx.openDocument({ filePath: res.tempFilePath, showMenu: true });
@@ -163,7 +163,7 @@ Page({
 
             wx.downloadFile({
               url: retryUrl,
-              timeout: 25000,
+              timeout: 60000,
               success: (r2) => {
                 if (r2.statusCode === 200 && r2.tempFilePath) {
                   wx.openDocument({ filePath: r2.tempFilePath, showMenu: true });

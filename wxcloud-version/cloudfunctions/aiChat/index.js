@@ -277,19 +277,24 @@ exports.main = async (event) => {
 
     if (!old || !old.sourceText) return { success: false, message: '缺少源内容，无法重生成', data: null };
 
-    const file = await createTextFile(openid, old.sourceText, old.baseName || old.name || '文件');
+    const regen = await Promise.race([
+      createTextFile(openid, old.sourceText, old.baseName || old.name || '文件'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('regen timeout')), 45000))
+    ]).catch((e) => null);
+
+    if (!regen) return { success: false, message: '重生成超时，请重试', data: null };
 
     await db.collection('ai_messages').add({
       data: {
         owner: openid,
         role: 'assistant',
         content: '文件已重新生成，点下方卡片打开。',
-        files: [file],
+        files: [regen],
         created_at: new Date()
       }
     });
 
-    return { success: true, message: 'ok', data: file };
+    return { success: true, message: 'ok', data: regen };
   }
 
   const userText = String(message || '').trim();
