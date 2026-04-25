@@ -123,6 +123,20 @@ function stripUrls(text) {
   return String(text || '').replace(/https?:\/\/[^\s]+/g, '【链接已隐藏，请点下方文件卡片】');
 }
 
+function sanitizeGeneratedDocText(text) {
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .filter((l) => !/^文件已生成[:：]?/i.test(l))
+    .filter((l) => !/点击.*(下载|文件卡片)/.test(l))
+    .filter((l) => !/用户上传文件/.test(l))
+    .filter((l) => !/链接已隐藏/.test(l))
+    .filter((l) => !/^https?:\/\//i.test(l));
+
+  return lines.join('\n').trim();
+}
+
 function firstUrl(text) {
   const m = String(text || '').match(/https?:\/\/[^\s]+/);
   return m ? m[0] : '';
@@ -381,8 +395,9 @@ exports.main = async (event) => {
   }
 
   const answerRaw = (((resp.data || {}).choices || [])[0] || {}).message?.content || '（无回复）';
-  const rawUrl = firstUrl(answerRaw);
-  const answer = stripUrls(answerRaw);
+  const normalizedAnswer = autoFileMode ? sanitizeGeneratedDocText(answerRaw) : answerRaw;
+  const rawUrl = firstUrl(normalizedAnswer);
+  const answer = stripUrls(normalizedAnswer);
 
   const assistantFiles = rawUrl
     ? [{ fileID: '', tempFileURL: rawUrl, name: '文件（点我打开）' }]
@@ -392,7 +407,8 @@ exports.main = async (event) => {
   if (autoFileMode) {
     try {
       const autoBaseName = extractPreferredFileBaseName(userText) || '';
-      const autoFile = await createTextFile(openid, answerRaw, autoBaseName);
+      const docBody = sanitizeGeneratedDocText(answerRaw) || '（空内容）';
+      const autoFile = await createTextFile(openid, docBody, autoBaseName);
       assistantFiles.push(autoFile);
     } catch (e) {
       // 自动落文件失败不影响文本回复

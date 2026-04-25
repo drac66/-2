@@ -1,18 +1,7 @@
 const app = getApp();
 
 function timeText(v) {
-  const d = new Date(v || Date.now());
-  const hh = `${d.getHours()}`.padStart(2, '0');
-  const mm = `${d.getMinutes()}`.padStart(2, '0');
-  return `${hh}:${mm}`;
-}
 
-function firstUrl(text) {
-  const m = String(text || '').match(/https?:\/\/[^\s]+/);
-  return m ? m[0] : '';
-}
-
-Page({
   data: {
     input: '',
     list: [],
@@ -70,8 +59,7 @@ Page({
       }
       const list = (ret.data || []).map((it) => ({
         ...it,
-        show_time: timeText(it.created_at),
-        fallbackUrl: firstUrl(it.content)
+        show_time: timeText(it.created_at)
       }));
       this.setData({ list });
       this.scrollToBottom();
