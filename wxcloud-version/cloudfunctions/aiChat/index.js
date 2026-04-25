@@ -203,8 +203,14 @@ exports.main = async (event) => {
     })
   ];
 
+  const endpoint = (() => {
+    const b = String(baseUrl || '').replace(/\/$/, '');
+    if (/\/v1$/i.test(b)) return `${b}/chat/completions`;
+    return `${b}/v1/chat/completions`;
+  })();
+
   const resp = await requestJsonWithRetry(
-    `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`,
+    endpoint,
     'POST',
     { Authorization: `Bearer ${apiKey}` },
     { model, messages, temperature: 0.7 },
