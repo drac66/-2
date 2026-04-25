@@ -17,16 +17,12 @@ Page({
     scrollIntoView: 'chat-bottom-anchor'
   },
 
-  showBusy(title = '处理中...') {
-    if (this._loadingShown) return;
-    this._loadingShown = true;
-    wx.showLoading({ title, mask: true });
+  showBusy() {
+    // 不再使用全局 showLoading，避免与页面其他流程冲突导致配对警告
   },
 
   hideBusy() {
-    if (!this._loadingShown) return;
-    this._loadingShown = false;
-    wx.hideLoading();
+    // no-op
   },
 
   onInput(e) {
