@@ -89,7 +89,7 @@ Page({
         } catch (e) {
           wx.showToast({ title: '上传失败', icon: 'none' });
         } finally {
-          wx.hideLoading();
+          this.hideBusy();
           this.setData({ uploading: false });
         }
       },
@@ -145,7 +145,7 @@ Page({
     } catch (err) {
       wx.showToast({ title: '导出失败', icon: 'none' });
     } finally {
-      wx.hideLoading();
+      this.hideBusy();
     }
   },
 
@@ -172,7 +172,7 @@ Page({
     } catch (e) {
       wx.showToast({ title: '发送失败(网络)', icon: 'none' });
     } finally {
-      wx.hideLoading();
+      this.hideBusy();
     }
   },
 
