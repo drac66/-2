@@ -22,6 +22,7 @@
       <view wx:if="{{item.title}}" class="mt-8">{{item.title}}</view>
       <view class="mt-8" style="white-space:pre-wrap">{{item.content}}</view>
       <view class="meta mt-8" style="white-space:pre-line">{{item.show_time}}</view>
+      <view class="meta" style="margin-top:6rpx;font-size:20rpx;opacity:.75;">— {{item.author_name || item.author || '未知'}}</view>
     </view>
   </block>
 </view>

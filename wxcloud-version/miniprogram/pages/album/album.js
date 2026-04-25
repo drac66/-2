@@ -192,6 +192,19 @@ Page({
     });
   },
 
+  previewImage(e) {
+    const current = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.src) || '';
+    const urls = (this.data.list || [])
+      .filter((it) => it.media_type === 'image' && it.media_url)
+      .map((it) => it.media_url);
+
+    if (!current) return;
+    wx.previewImage({
+      current,
+      urls: urls.length ? urls : [current]
+    });
+  },
+
   onShow() {
     this.loadList();
   },
