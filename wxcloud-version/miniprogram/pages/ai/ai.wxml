@@ -8,7 +8,17 @@
       <view class="list-gap" style="margin-top: 14rpx;">
         <view class="meta">{{item.role === 'assistant' ? 'GPT' : '我'}} · {{item.show_time}}</view>
         <view style="white-space: pre-wrap; margin-top: 6rpx;">{{item.content}}</view>
-        <view wx:if="{{item.files && item.files.length}}" class="meta" style="margin-top: 6rpx;">含 {{item.files.length}} 个文件</view>
+
+        <view wx:if="{{item.role==='assistant' && item.content}}" style="margin-top:10rpx;">
+          <button class="btn-soft" size="mini" data-text="{{item.content}}" bindtap="exportAsTxt">导出为txt</button>
+        </view>
+
+        <view wx:if="{{item.files && item.files.length}}" class="meta" style="margin-top: 6rpx;">文件：</view>
+        <block wx:for="{{item.files}}" wx:key="fileID">
+          <view class="meta" style="margin-top:4rpx;color:#2f80ed;" data-url="{{item.tempFileURL}}" bindtap="openFile">
+            📎 {{item.name || '文件'}}（点我打开）
+          </view>
+        </block>
       </view>
     </block>
   </view>
@@ -16,6 +26,7 @@
   <view class="card">
     <view wx:if="{{pendingFilesText}}" class="meta" style="margin-bottom: 8rpx;">{{pendingFilesText}}</view>
     <input class="input" placeholder="输入问题，或先上传PDF/Word..." value="{{input}}" bindinput="onInput" />
+    <button class="btn-soft mb-12" bindtap="fillSummaryPrompt">插入文档摘要模板</button>
     <button class="forest-btn mb-12" bindtap="chooseFile" loading="{{uploading}}">上传文件</button>
     <button class="forest-btn" bindtap="send">发送给GPT</button>
   </view>

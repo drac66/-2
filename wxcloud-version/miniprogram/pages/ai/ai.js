@@ -20,6 +20,18 @@ Page({
     this.setData({ input: e.detail.value || '' });
   },
 
+  fillSummaryPrompt() {
+    const tpl = [
+      '请帮我处理我上传的文档，并按以下格式输出：',
+      '1) 三句话总结全文',
+      '2) 关键要点（3-8条）',
+      '3) 可执行建议（按优先级）',
+      '4) 如果是合同/论文/报告，请列出风险点或疑问点',
+      '5) 最后给出一个“给小白看的简版结论”'
+    ].join('\n');
+    this.setData({ input: tpl });
+  },
+
   async loadList() {
     const token = app.globalData.token || wx.getStorageSync('token') || '';
     const res = await wx.cloud.callFunction({ name: 'aiChat', data: { action: 'list', token } });
@@ -63,6 +75,58 @@ Page({
       },
       fail: () => this.setData({ uploading: false })
     });
+  },
+
+  openFile(e) {
+    const url = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.url) || '';
+    if (!url) {
+      wx.showToast({ title: '文件链接已过期，请刷新', icon: 'none' });
+      return;
+    }
+    wx.downloadFile({
+      url,
+      success: (res) => {
+        if (res.statusCode === 200 && res.tempFilePath) {
+          wx.openDocument({ filePath: res.tempFilePath, showMenu: true });
+        } else {
+          wx.showToast({ title: '文件下载失败', icon: 'none' });
+        }
+      },
+      fail: () => wx.showToast({ title: '文件下载失败', icon: 'none' })
+    });
+  },
+
+  async exportAsTxt(e) {
+    const text = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.text) || '';
+    if (!text) {
+      wx.showToast({ title: '没有可导出的内容', icon: 'none' });
+      return;
+    }
+
+    try {
+      wx.showLoading({ title: '生成文件中...' });
+      const token = app.globalData.token || wx.getStorageSync('token') || '';
+      const res = await wx.cloud.callFunction({
+        name: 'aiChat',
+        data: {
+          action: 'exportTxt',
+          token,
+          text,
+          filename: `gpt_reply_${Date.now()}.txt`
+        }
+      });
+      const ret = res.result || {};
+      if (!ret.success) {
+        wx.showToast({ title: ret.message || '导出失败', icon: 'none' });
+        return;
+      }
+      wx.showToast({ title: '已生成文件', icon: 'success' });
+      await this.loadList();
+    } catch (err) {
+      wx.showToast({ title: '导出失败', icon: 'none' });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   async send() {

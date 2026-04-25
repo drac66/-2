@@ -54,12 +54,50 @@ function requestJson(url, method, headers, bodyObj) {
   });
 }
 
+function guessNameFromFileID(fileID) {
+  const part = String(fileID || '').split('/').pop() || 'file';
+  return part.replace(/^\d+_/, '') || part;
+}
+
 async function buildFileHints(fileIDs) {
   if (!Array.isArray(fileIDs) || !fileIDs.length) return [];
   const temp = await cloud.getTempFileURL({ fileList: fileIDs });
   return (temp.fileList || []).map((f) => ({
     fileID: f.fileID,
-    tempFileURL: f.tempFileURL || ''
+    tempFileURL: f.tempFileURL || '',
+    name: guessNameFromFileID(f.fileID)
+  }));
+}
+
+async function refreshMessageFiles(rows) {
+  const allFileIDs = [];
+  (rows || []).forEach((m) => {
+    (m.files || []).forEach((f) => {
+      if (f && f.fileID) allFileIDs.push(f.fileID);
+    });
+  });
+
+  const uniq = [...new Set(allFileIDs)];
+  if (!uniq.length) return rows || [];
+
+  let tempMap = {};
+  try {
+    const temp = await cloud.getTempFileURL({ fileList: uniq });
+    tempMap = (temp.fileList || []).reduce((acc, it) => {
+      acc[it.fileID] = it.tempFileURL || '';
+      return acc;
+    }, {});
+  } catch (e) {
+    tempMap = {};
+  }
+
+  return (rows || []).map((m) => ({
+    ...m,
+    files: (m.files || []).map((f) => ({
+      ...f,
+      name: f.name || guessNameFromFileID(f.fileID),
+      tempFileURL: tempMap[f.fileID] || f.tempFileURL || ''
+    }))
   }));
 }
 
@@ -67,16 +105,42 @@ exports.main = async (event) => {
   const userAuth = auth();
   if (!userAuth) return { success: false, message: 'unauthorized', data: null };
 
-  const { action = 'chat', message = '', fileIDs = [] } = event || {};
+  const { action = 'chat', message = '', fileIDs = [], text = '', filename = '' } = event || {};
   const { openid } = userAuth;
 
   if (action === 'list') {
     const r = await db.collection('ai_messages').where({ owner: openid }).orderBy('created_at', 'asc').limit(200).get();
-    return { success: true, message: 'ok', data: r.data || [] };
+    const rows = await refreshMessageFiles(r.data || []);
+    return { success: true, message: 'ok', data: rows };
   }
 
-  const text = String(message || '').trim();
-  if (!text && (!Array.isArray(fileIDs) || !fileIDs.length)) {
+  if (action === 'exportTxt') {
+    const body = String(text || '').trim();
+    if (!body) return { success: false, message: 'text required', data: null };
+
+    const safeName = (filename || `gpt_${Date.now()}.txt`).replace(/[\\/:*?"<>|]/g, '_');
+    const cloudPath = `ai-output/${openid}/${Date.now()}_${safeName.endsWith('.txt') ? safeName : `${safeName}.txt`}`;
+    const up = await cloud.uploadFile({ cloudPath, fileContent: Buffer.from(body, 'utf8') });
+    const fileID = up.fileID;
+    const temp = await cloud.getTempFileURL({ fileList: [fileID] });
+    const tempUrl = ((temp.fileList || [])[0] || {}).tempFileURL || '';
+
+    const files = [{ fileID, tempFileURL: tempUrl, name: safeName.endsWith('.txt') ? safeName : `${safeName}.txt` }];
+    await db.collection('ai_messages').add({
+      data: {
+        owner: openid,
+        role: 'assistant',
+        content: '已生成文本文件，可点击下方文件卡片打开/下载。',
+        files,
+        created_at: new Date()
+      }
+    });
+
+    return { success: true, message: 'ok', data: { fileID, tempFileURL: tempUrl, name: files[0].name } };
+  }
+
+  const userText = String(message || '').trim();
+  if (!userText && (!Array.isArray(fileIDs) || !fileIDs.length)) {
     return { success: false, message: 'message or file required', data: null };
   }
 
@@ -86,7 +150,7 @@ exports.main = async (event) => {
     data: {
       owner: openid,
       role: 'user',
-      content: text,
+      content: userText,
       files: fileHints,
       created_at: new Date()
     }
@@ -139,3 +203,4 @@ exports.main = async (event) => {
 
   return { success: true, message: 'ok', data: { reply: answer } };
 };
+
