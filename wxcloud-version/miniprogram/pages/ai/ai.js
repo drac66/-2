@@ -200,17 +200,12 @@ Page({
   },
 
   async offerRegenerate(fileID) {
-    if (!fileID) {
-      wx.showToast({ title: '文件信息缺失，无法重生成', icon: 'none' });
-      return;
-    }
-
     wx.showLoading({ title: '正在重生成...', mask: true });
     try {
       const token = app.globalData.token || wx.getStorageSync('token') || '';
       const res = await wx.cloud.callFunction({
         name: 'aiChat',
-        data: { action: 'regenerateFile', token, fileID },
+        data: { action: 'regenerateFile', token, fileID: fileID || '' },
         timeout: 120000
       });
       const ret = res.result || {};
