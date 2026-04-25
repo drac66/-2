@@ -2,6 +2,7 @@
 const cloud = require('wx-server-sdk');
 const https = require('https');
 const { Document, Packer, Paragraph, TextRun } = require('docx');
+const PDFDocument = require('pdfkit');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -126,12 +127,30 @@ async function refreshMessageFiles(rows) {
   }));
 }
 
+async function buildPdfBuffer(text) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 48 });
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const lines = String(text || '').split(/\r?\n/);
+    lines.forEach((line, idx) => {
+      doc.fontSize(12).text(line || ' ', { lineGap: 3 });
+      if (idx !== lines.length - 1) doc.moveDown(0.2);
+    });
+    doc.end();
+  });
+}
+
 async function createTextFile(openid, text, ext = 'txt') {
   const body = String(text || '').trim();
   if (!body) throw new Error('empty text');
 
   const now = Date.now();
-  const safeExt = (ext || 'txt').toLowerCase() === 'docx' ? 'docx' : 'txt';
+  const reqExt = String(ext || 'docx').toLowerCase();
+  const safeExt = reqExt === 'pdf' ? 'pdf' : (reqExt === 'docx' ? 'docx' : 'docx');
   const filename = `gpt_reply_${now}.${safeExt}`;
   const cloudPath = `ai-output/${openid}/${filename}`;
 
@@ -148,7 +167,7 @@ async function createTextFile(openid, text, ext = 'txt') {
     });
     fileContent = await Packer.toBuffer(doc);
   } else {
-    fileContent = Buffer.from(body, 'utf8');
+    fileContent = await buildPdfBuffer(body);
   }
 
   const up = await cloud.uploadFile({ cloudPath, fileContent });
@@ -176,7 +195,8 @@ exports.main = async (event) => {
     const body = String(text || '').trim();
     if (!body) return { success: false, message: 'text required', data: null };
 
-    const ext = String(format || '').toLowerCase() === 'docx' ? 'docx' : 'txt';
+    const reqFormat = String(format || '').toLowerCase();
+    const ext = reqFormat === 'pdf' ? 'pdf' : 'docx';
     const file = await createTextFile(openid, body, ext);
 
     await db.collection('ai_messages').add({

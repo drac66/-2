@@ -4,6 +4,7 @@
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "latest",
-    "docx": "^9.5.1"
+    "docx": "^9.5.1",
+    "pdfkit": "^0.15.0"
   }
 }

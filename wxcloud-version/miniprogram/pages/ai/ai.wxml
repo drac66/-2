@@ -17,8 +17,8 @@
             <view class="msg-content">{{item.content}}</view>
 
             <view wx:if="{{item.role==='assistant' && item.content}}" class="assistant-actions">
-              <text class="action-link" data-text="{{item.content}}" data-format="txt" bindtap="exportAsFile">发TXT</text>
-              <text class="action-link" data-text="{{item.content}}" data-format="docx" bindtap="exportAsFile">发DOCX</text>
+              <text class="action-link" data-text="{{item.content}}" data-format="docx" bindtap="exportAsFile">发WORD</text>
+              <text class="action-link" data-text="{{item.content}}" data-format="pdf" bindtap="exportAsFile">发PDF</text>
             </view>
 
             <block wx:if="{{item.files && item.files.length}}">

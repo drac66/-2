@@ -47,7 +47,7 @@ Page({
 
   async exportAsFile(e) {
     const text = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.text) || '';
-    const format = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.format) || 'txt';
+    const format = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.format) || 'docx';
     if (!text) {
       wx.showToast({ title: '没有可导出的内容', icon: 'none' });
       return;
