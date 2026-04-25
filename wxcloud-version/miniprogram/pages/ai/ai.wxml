@@ -25,7 +25,14 @@
 
   <view class="card">
     <view wx:if="{{pendingFilesText}}" class="meta" style="margin-bottom: 8rpx;">{{pendingFilesText}}</view>
-    <input class="input" placeholder="输入问题，或先上传PDF/Word..." value="{{input}}" bindinput="onInput" />
+    <input
+      class="input"
+      placeholder="输入问题，或先上传PDF/Word..."
+      value="{{input}}"
+      bindinput="onInput"
+      confirm-type="send"
+      bindconfirm="onInputConfirm"
+    />
     <button class="btn-soft mb-12" bindtap="fillSummaryPrompt">插入文档摘要模板</button>
     <button class="forest-btn mb-12" bindtap="chooseFile" loading="{{uploading}}">上传文件</button>
     <button class="forest-btn" bindtap="send">发送给GPT</button>

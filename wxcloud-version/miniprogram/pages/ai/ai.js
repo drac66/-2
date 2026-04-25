@@ -20,6 +20,10 @@ Page({
     this.setData({ input: e.detail.value || '' });
   },
 
+  onInputConfirm() {
+    this.send();
+  },
+
   fillSummaryPrompt() {
     const tpl = [
       '请帮我处理我上传的文档，并按以下格式输出：',
