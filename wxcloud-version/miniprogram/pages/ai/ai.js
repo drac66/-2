@@ -199,34 +199,32 @@ Page({
     });
   },
 
-  offerRegenerate(fileID) {
-    wx.showModal({
-      title: '打开失败',
-      content: '链接可能过期，是否重新生成同名文件？',
-      success: async (m) => {
-        if (!m.confirm || !fileID) return;
-        try {
-          this.showBusy('重新生成中...');
-          const token = app.globalData.token || wx.getStorageSync('token') || '';
-          const res = await wx.cloud.callFunction({
-            name: 'aiChat',
-            data: { action: 'regenerateFile', token, fileID: fileID || '' },
-            timeout: 60000
-          });
-          const ret = res.result || {};
-          if (!ret.success) {
-            wx.showToast({ title: '重生成失败，请重试', icon: 'none' });
-            return;
-          }
-          wx.showToast({ title: '已重生成', icon: 'success' });
-          await this.loadList();
-        } catch (e) {
-          wx.showToast({ title: '重生成失败，请重试', icon: 'none' });
-        } finally {
-          this.hideBusy();
-        }
+  async offerRegenerate(fileID) {
+    if (!fileID) {
+      wx.showToast({ title: '文件信息缺失，无法重生成', icon: 'none' });
+      return;
+    }
+
+    wx.showLoading({ title: '正在重生成...', mask: true });
+    try {
+      const token = app.globalData.token || wx.getStorageSync('token') || '';
+      const res = await wx.cloud.callFunction({
+        name: 'aiChat',
+        data: { action: 'regenerateFile', token, fileID },
+        timeout: 120000
+      });
+      const ret = res.result || {};
+      if (!ret.success) {
+        wx.showToast({ title: ret.message || '重生成失败', icon: 'none' });
+        return;
       }
-    });
+      wx.showToast({ title: '已重生成', icon: 'success' });
+      await this.loadList();
+    } catch (e) {
+      wx.showToast({ title: '重生成超时，请稍后重试', icon: 'none' });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   async send() {
