@@ -27,6 +27,7 @@ Page({
   toAlbum() { wx.navigateTo({ url: '/pages/album/album' }); },
   toMessages() { wx.navigateTo({ url: '/pages/messages/messages' }); },
   toDiary() { wx.navigateTo({ url: '/pages/diary/diary' }); },
+  toAI() { wx.navigateTo({ url: '/pages/ai/ai' }); },
   toSettings() { wx.navigateTo({ url: '/pages/settings/settings' }); },
 
   logout() {
@@ -45,3 +46,4 @@ Page({
     }, 300);
   }
 });
+

@@ -16,14 +16,15 @@
     <view class="cloud cloud-b"></view>
     <view class="cloud cloud-b-1"></view>
     <view class="cloud cloud-b-2"></view>
-    <view class="hero-title">🌿 我们的小森林</view>
-    <view class="hero-subtitle">天空晴朗，慢慢逛我们的角落</view>
+    <view class="hero-title">🌿 我们的秘密空间</view>
+    <view class="hero-subtitle">天空晴朗，慢慢逛我们的角落吧</view>
   </view>
 
   <view class="card">
     <button class="forest-btn mb-16" bindtap="toAlbum">相册</button>
     <button class="forest-btn mb-16" bindtap="toMessages">留言</button>
     <button class="forest-btn mb-16" bindtap="toDiary">日记</button>
+    <button class="forest-btn mb-16" bindtap="toAI">GPT助手</button>
     <button class="forest-btn mb-16" bindtap="toSettings">设置</button>
     <button class="btn-soft" bindtap="logout">退出登录</button>
   </view>

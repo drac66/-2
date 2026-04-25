@@ -5,7 +5,8 @@
     "pages/settings/settings",
     "pages/album/album",
     "pages/messages/messages",
-    "pages/diary/diary"
+    "pages/diary/diary",
+    "pages/ai/ai"
   ],
   "window": {
     "navigationBarTitleText": "我们的秘密空间",
