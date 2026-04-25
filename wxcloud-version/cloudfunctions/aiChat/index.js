@@ -235,19 +235,30 @@ exports.main = async (event) => {
 
   if (action === 'regenerateFile') {
     const targetFileID = String((event || {}).fileID || '').trim();
-    if (!targetFileID) return { success: false, message: 'fileID required', data: null };
 
-    const _ = db.command;
     const r = await db.collection('ai_messages')
-      .where({ owner: openid, files: _.elemMatch({ fileID: targetFileID }) })
+      .where({ owner: openid })
       .orderBy('created_at', 'desc')
-      .limit(1)
+      .limit(80)
       .get();
 
-    const hit = (r.data || [])[0] || null;
+    const rows = r.data || [];
+    let hit = null;
+
+    if (targetFileID) {
+      hit = rows.find((m) => (m.files || []).some((f) => f.fileID === targetFileID)) || null;
+    }
+    if (!hit) {
+      // 兜底：找最近一条带 sourceText 的文件消息
+      hit = rows.find((m) => (m.files || []).some((f) => f && f.sourceText)) || null;
+    }
+
     if (!hit) return { success: false, message: '未找到可重生成的文件', data: null };
 
-    const old = (hit.files || []).find((f) => f.fileID === targetFileID) || null;
+    const old = targetFileID
+      ? ((hit.files || []).find((f) => f.fileID === targetFileID) || null)
+      : ((hit.files || []).find((f) => f && f.sourceText) || null);
+
     if (!old || !old.sourceText) return { success: false, message: '缺少源内容，无法重生成', data: null };
 
     const file = await createTextFile(openid, old.sourceText, old.baseName || old.name || '文件');

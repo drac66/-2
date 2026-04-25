@@ -196,7 +196,7 @@ Page({
           const token = app.globalData.token || wx.getStorageSync('token') || '';
           const res = await wx.cloud.callFunction({
             name: 'aiChat',
-            data: { action: 'regenerateFile', token, fileID }
+            data: { action: 'regenerateFile', token, fileID: fileID || '' }
           });
           const ret = res.result || {};
           if (!ret.success) {
