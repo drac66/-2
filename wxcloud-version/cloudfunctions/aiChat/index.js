@@ -2,7 +2,6 @@
 const cloud = require('wx-server-sdk');
 const https = require('https');
 const { Document, Packer, Paragraph, TextRun } = require('docx');
-const PDFDocument = require('pdfkit');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -89,7 +88,7 @@ function extractDirectFileIntent(text) {
   const s = String(text || '').trim();
   if (!s) return null;
 
-  const trigger = /(发|生成|做|给我).*(文件|文档|word|docx|pdf)/i.test(s);
+  const trigger = /(发|生成|做|给我).*(文件|文档|word|docx)/i.test(s);
   if (!trigger) return null;
 
   // 支持：内容为xxx / 内容是xxx / 内容仅“xxx” / 内容:xxx
@@ -110,9 +109,7 @@ function extractDirectFileIntent(text) {
   const nameMatch = s.match(/(?:名字|文件名)(?:叫|为|是|：|:)\s*([^\n，。,.]+)/i);
   const filename = nameMatch ? nameMatch[1].trim() : '';
 
-  const format = /pdf/i.test(s) ? 'pdf' : 'docx';
-
-  return { content, filename, format };
+  return { content, filename, format: 'docx' };
 }
 
 function sanitizeBaseName(name) {
@@ -179,34 +176,11 @@ async function refreshMessageFiles(rows) {
   }));
 }
 
-async function buildPdfBuffer(text) {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 48 });
-    const chunks = [];
-    doc.on('data', (c) => chunks.push(c));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
-
-    const lines = String(text || '').split(/\r?\n/);
-    lines.forEach((line, idx) => {
-      doc.fontSize(12).text(line || ' ', { lineGap: 3 });
-      if (idx !== lines.length - 1) doc.moveDown(0.2);
-    });
-    doc.end();
-  });
-}
-
-async function createTextFile(openid, text, ext = 'txt', customBaseName = '') {
+async function createTextFile(openid, text, customBaseName = '') {
   const body = String(text || '').trim();
   if (!body) throw new Error('empty text');
 
-  const reqExt = String(ext || 'docx').toLowerCase();
-  let safeExt = reqExt === 'pdf' ? 'pdf' : (reqExt === 'docx' ? 'docx' : 'docx');
-
-  // PDF 中文兼容问题：自动回退为 DOCX，避免乱码
-  if (safeExt === 'pdf' && /[\u3400-\u9FFF]/.test(body)) {
-    safeExt = 'docx';
-  }
+  const safeExt = 'docx';
 
   let baseName = sanitizeBaseName(customBaseName);
   if (!baseName) {
@@ -218,20 +192,16 @@ async function createTextFile(openid, text, ext = 'txt', customBaseName = '') {
   const cloudPath = `ai-output/${openid}/${Date.now()}_${filename}`;
 
   let fileContent;
-  if (safeExt === 'docx') {
-    const lines = body.split(/\r?\n/);
-    const doc = new Document({
-      sections: [{
-        properties: {},
-        children: lines.map((line) => new Paragraph({
-          children: [new TextRun(line || ' ')]
-        }))
-      }]
-    });
-    fileContent = await Packer.toBuffer(doc);
-  } else {
-    fileContent = await buildPdfBuffer(body);
-  }
+  const lines = body.split(/\r?\n/);
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: lines.map((line) => new Paragraph({
+        children: [new TextRun(line || ' ')]
+      }))
+    }]
+  });
+  fileContent = await Packer.toBuffer(doc);
 
   const up = await cloud.uploadFile({ cloudPath, fileContent });
   const fileID = up.fileID;
@@ -255,24 +225,7 @@ exports.main = async (event) => {
   }
 
   if (action === 'exportTxt') {
-    const body = String(text || '').trim();
-    if (!body) return { success: false, message: 'text required', data: null };
-
-    const reqFormat = String(format || '').toLowerCase();
-    const ext = reqFormat === 'pdf' ? 'pdf' : 'docx';
-    const file = await createTextFile(openid, body, ext, filename);
-
-    await db.collection('ai_messages').add({
-      data: {
-        owner: openid,
-        role: 'assistant',
-        content: `文件已生成，点下方卡片打开。`,
-        files: [file],
-        created_at: new Date()
-      }
-    });
-
-    return { success: true, message: 'ok', data: file };
+    return { success: false, message: 'disabled', data: null };
   }
 
   const userText = String(message || '').trim();
@@ -295,7 +248,7 @@ exports.main = async (event) => {
   // 直出文件意图：不走模型自由发挥，按用户内容原样生成
   const directIntent = extractDirectFileIntent(userText);
   if (directIntent) {
-    const file = await createTextFile(openid, directIntent.content, directIntent.format, directIntent.filename);
+    const file = await createTextFile(openid, directIntent.content, directIntent.filename);
     const ext = file.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'WORD';
 
     await db.collection('ai_messages').add({
@@ -308,7 +261,7 @@ exports.main = async (event) => {
       }
     });
 
-    return { success: true, message: 'ok', data: { reply: `已生成文件：${file.name}` } };
+    return { success: true, message: 'ok', data: { reply: `文件已生成。` } };
   }
 
   const baseUrl = process.env.AI_BASE_URL || 'https://cmdme.cn';
