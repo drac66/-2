@@ -203,23 +203,41 @@ exports.main = async (event) => {
     })
   ];
 
-  const endpoint = (() => {
-    const b = String(baseUrl || '').replace(/\/$/, '');
-    if (/\/v1$/i.test(b)) return `${b}/chat/completions`;
-    return `${b}/v1/chat/completions`;
-  })();
+  const base = String(baseUrl || '').replace(/\/$/, '');
+  const endpointCandidates = /\/v1$/i.test(base)
+    ? [
+      `${base}/chat/completions`,
+      `${base.replace(/\/v1$/i, '')}/v1/chat/completions`,
+      `${base.replace(/\/v1$/i, '')}/chat/completions`
+    ]
+    : [
+      `${base}/v1/chat/completions`,
+      `${base}/chat/completions`
+    ];
 
-  const resp = await requestJsonWithRetry(
-    endpoint,
-    'POST',
-    { Authorization: `Bearer ${apiKey}` },
-    { model, messages, temperature: 0.7 },
-    1
-  );
+  let resp = null;
+  let usedEndpoint = '';
+  for (const ep of endpointCandidates) {
+    usedEndpoint = ep;
+    resp = await requestJsonWithRetry(
+      ep,
+      'POST',
+      { Authorization: `Bearer ${apiKey}` },
+      { model, messages, temperature: 0.7 },
+      1
+    );
 
-  if (resp.status < 200 || resp.status >= 300) {
-    const detail = resp.data || { raw: String(resp.raw || '').slice(0, 500) };
-    return { success: false, message: `ai http ${resp.status}`, data: detail };
+    // 命中可用端点后直接退出；404 继续尝试下一个候选
+    if (resp.status !== 404) break;
+  }
+
+  if (!resp || resp.status < 200 || resp.status >= 300) {
+    const detail = {
+      endpoint: usedEndpoint,
+      ...(resp && resp.data ? resp.data : {}),
+      ...(resp && !resp.data ? { raw: String(resp.raw || '').slice(0, 500) } : {})
+    };
+    return { success: false, message: `ai http ${resp ? resp.status : 'unknown'}`, data: detail };
   }
 
   const answer = (((resp.data || {}).choices || [])[0] || {}).message?.content || '（无回复）';
