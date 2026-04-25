@@ -89,20 +89,16 @@ function extractDirectFileIntent(text) {
   const s = String(text || '').trim();
   if (!s) return null;
 
-  // 触发词：发文件/发word/发pdf/生成文件
-  const trigger = /(发|生成).*(文件|word|docx|pdf)/i.test(s);
+  const trigger = /(发|生成|做|给我).*(文件|文档|word|docx|pdf)/i.test(s);
   if (!trigger) return null;
 
-  // 内容：内容为xxx / 内容是xxx
-  const contentMatch = s.match(/内容(?:为|是)\s*([\s\S]+)$/i);
+  const contentMatch = s.match(/内容(?:为|是|：|:)\s*([\s\S]+)$/i);
   const content = contentMatch ? contentMatch[1].trim() : '';
   if (!content) return null;
 
-  // 文件名：名字叫xxx / 文件名为xxx
-  const nameMatch = s.match(/(?:名字|文件名)(?:叫|为)\s*([^\n，。,.]+)/i);
+  const nameMatch = s.match(/(?:名字|文件名)(?:叫|为|是|：|:)\s*([^\n，。,.]+)/i);
   const filename = nameMatch ? nameMatch[1].trim() : '';
 
-  // 格式：优先识别 pdf，否则默认为 docx
   const format = /pdf/i.test(s) ? 'pdf' : 'docx';
 
   return { content, filename, format };
@@ -259,7 +255,7 @@ exports.main = async (event) => {
       data: {
         owner: openid,
         role: 'assistant',
-        content: `已生成${ext.toUpperCase()}文件，可点击下方文件卡片打开/下载。`,
+        content: `文件已生成，点下方卡片打开。`,
         files: [file],
         created_at: new Date()
       }
@@ -295,7 +291,7 @@ exports.main = async (event) => {
       data: {
         owner: openid,
         role: 'assistant',
-        content: `已按你的要求生成${ext}文件：${file.name}`,
+        content: `文件已生成：${file.name}`,
         files: [file],
         created_at: new Date()
       }
@@ -314,7 +310,10 @@ exports.main = async (event) => {
   const history = (recent.data || []).reverse();
 
   const messages = [
-    { role: 'system', content: '你是小程序里的私人AI助手。回答简洁、可靠。用户上传文件时，优先基于文件提示给出可执行建议。' },
+    {
+      role: 'system',
+      content: '你是小程序里的私人助手。只用简体中文回复，短句，直接给结果。不要英文、不要代码、不要Markdown链接。'
+    },
     ...history.map((m) => {
       const fileText = (m.files || []).length
         ? `\n\n用户上传文件（临时链接，可能过期）:\n${m.files.map((f) => `- ${f.tempFileURL || f.fileID}`).join('\n')}`
