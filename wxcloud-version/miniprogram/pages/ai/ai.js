@@ -13,7 +13,8 @@ Page({
     list: [],
     uploading: false,
     sending: false,
-    pendingFiles: []
+    pendingFiles: [],
+    scrollIntoView: 'chat-bottom-anchor'
   },
 
   showBusy(title = '处理中...') {
@@ -36,17 +37,14 @@ Page({
     this.send();
   },
 
-  onMessageLongPress(e) {
-    const role = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.role) || '';
-    const text = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.text) || '';
-    if (role !== 'assistant' || !text) return;
-
-    wx.setClipboardData({
-      data: text,
-      success: () => wx.showToast({ title: '已复制GPT内容', icon: 'success' }),
-      fail: () => wx.showToast({ title: '复制失败', icon: 'none' })
-    });
+  scrollToBottom() {
+    // 先清空再设置同一锚点，确保重复消息也能触发滚动
+    this.setData({ scrollIntoView: '' });
+    setTimeout(() => {
+      this.setData({ scrollIntoView: 'chat-bottom-anchor' });
+    }, 30);
   },
+
 
   async loadList() {
     const token = app.globalData.token || wx.getStorageSync('token') || '';
@@ -59,6 +57,7 @@ Page({
       }
       const list = (ret.data || []).map((it) => ({ ...it, show_time: timeText(it.created_at) }));
       this.setData({ list });
+      this.scrollToBottom();
     } catch (e) {
       wx.showToast({ title: '加载失败(网络)', icon: 'none' });
     }

@@ -4,27 +4,30 @@
 <view class="container page-shell">
   <view class="card chat-wrap">
     <view class="title">GPT助手</view>
-    <block wx:for="{{list}}" wx:key="_id">
-      <view class="msg-row {{item.role==='assistant' ? 'assistant' : 'user'}}">
-        <view
-          class="msg-bubble {{item.role==='assistant' ? 'assistant' : 'user'}}"
-          data-text="{{item.content}}"
-          data-role="{{item.role}}"
-          bindlongpress="onMessageLongPress"
-        >
-          <view class="msg-meta">{{item.role === 'assistant' ? 'GPT' : '我'}} · {{item.show_time}}</view>
-          <view class="msg-content">{{item.content}}</view>
+    <scroll-view class="chat-scroll" scroll-y="true" scroll-with-animation="true" scroll-into-view="{{scrollIntoView}}">
+      <block wx:for="{{list}}" wx:key="_id">
+        <view id="msg-{{item._id || index}}" class="msg-row {{item.role==='assistant' ? 'assistant' : 'user'}}">
+          <view
+            class="msg-bubble {{item.role==='assistant' ? 'assistant' : 'user'}}"
+            data-text="{{item.content}}"
+            data-role="{{item.role}}"
+            bindlongpress="onMessageLongPress"
+          >
+            <view class="msg-meta">{{item.role === 'assistant' ? 'GPT' : '我'}} · {{item.show_time}}</view>
+            <view class="msg-content">{{item.content}}</view>
 
-          <block wx:if="{{item.files && item.files.length}}">
-            <block wx:for="{{item.files}}" wx:key="fileID">
-              <view class="file-link" data-url="{{item.tempFileURL}}" bindtap="openFile">
-                📎 {{item.name || '文件'}}（点我打开）
-              </view>
+            <block wx:if="{{item.files && item.files.length}}">
+              <block wx:for="{{item.files}}" wx:key="fileID">
+                <view class="file-link" data-url="{{item.tempFileURL}}" bindtap="openFile">
+                  📎 {{item.name || '文件'}}（点我打开）
+                </view>
+              </block>
             </block>
-          </block>
+          </view>
         </view>
-      </view>
-    </block>
+      </block>
+      <view id="chat-bottom-anchor" style="height: 2rpx;"></view>
+    </scroll-view>
   </view>
 
   <view class="card">
