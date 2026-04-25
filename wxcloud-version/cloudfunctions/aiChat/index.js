@@ -281,6 +281,8 @@ exports.main = async (event) => {
     return { success: false, message: 'message or file required', data: null };
   }
 
+  const autoFileMode = shouldAutoGenerateFileFromPrompt(userText);
+
   const fileHints = await buildFileHints(fileIDs).catch(() => []);
 
   await db.collection('ai_messages').add({
@@ -326,6 +328,12 @@ exports.main = async (event) => {
       role: 'system',
       content: '你是小程序里的私人助手。只用简体中文回复，短句，直接给结果。不要英文、不要代码、不要Markdown链接。'
     },
+    ...(autoFileMode
+      ? [{
+        role: 'system',
+        content: '当前任务用于生成可下载Word文档。请只输出最终正文内容本身，不要写“已生成”“点击下载”“下面是”等任何说明性句子。'
+      }]
+      : []),
     ...history.map((m) => {
       const fileText = (m.files || []).length
         ? `\n\n用户上传文件（临时链接，可能过期）:\n${m.files.map((f) => `- ${f.tempFileURL || f.fileID}`).join('\n')}`
@@ -381,7 +389,7 @@ exports.main = async (event) => {
     : [];
 
   // 用户明确希望“AI生成后直接给文件”时，自动把回答落成 Word 附件
-  if (shouldAutoGenerateFileFromPrompt(userText)) {
+  if (autoFileMode) {
     try {
       const autoBaseName = extractPreferredFileBaseName(userText) || '';
       const autoFile = await createTextFile(openid, answerRaw, autoBaseName);
