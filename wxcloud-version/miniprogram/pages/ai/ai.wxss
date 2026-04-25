@@ -52,3 +52,43 @@
   color: #2f80ed;
   font-size: 24rpx;
 }
+
+.pending-box {
+  padding: 12rpx;
+  border-radius: 14rpx;
+  background: rgba(255,255,255,0.45);
+  margin-bottom: 10rpx;
+}
+
+.pending-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6rpx;
+}
+
+.pending-clear {
+  color: #ff5a5f;
+  font-size: 22rpx;
+}
+
+.pending-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6rpx 0;
+}
+
+.pending-name {
+  color: #1f2d3d;
+  font-size: 24rpx;
+  max-width: 520rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-remove {
+  color: #2f80ed;
+  font-size: 22rpx;
+}

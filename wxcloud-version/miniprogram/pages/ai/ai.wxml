@@ -28,7 +28,19 @@
   </view>
 
   <view class="card">
-    <view wx:if="{{pendingFilesText}}" class="meta" style="margin-bottom: 8rpx;">{{pendingFilesText}}</view>
+    <view wx:if="{{pendingFiles.length}}" class="pending-box">
+      <view class="pending-head">
+        <text class="meta">待发送文件（{{pendingFiles.length}}）</text>
+        <text class="pending-clear" bindtap="clearPendingFiles">清空</text>
+      </view>
+      <block wx:for="{{pendingFiles}}" wx:key="fileID">
+        <view class="pending-item">
+          <text class="pending-name">📄 {{item.name}}</text>
+          <text class="pending-remove" data-index="{{index}}" bindtap="removePendingFile">移除</text>
+        </view>
+      </block>
+    </view>
+
     <input
       class="input"
       placeholder="输入问题，或先上传PDF/Word..."
@@ -37,8 +49,7 @@
       confirm-type="send"
       bindconfirm="onInputConfirm"
     />
-    <button class="btn-soft mb-12" bindtap="fillSummaryPrompt">插入文档摘要模板</button>
-    <button class="forest-btn mb-12" bindtap="chooseFile" loading="{{uploading}}">上传文件</button>
-    <button class="forest-btn" bindtap="send">发送给GPT</button>
+    <button class="forest-btn mb-12" bindtap="chooseFile" loading="{{uploading}}">上传文件（支持多选）</button>
+    <button class="forest-btn" bindtap="send" loading="{{sending}}">发送给GPT</button>
   </view>
 </view>

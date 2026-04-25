@@ -12,8 +12,8 @@ Page({
     input: '',
     list: [],
     uploading: false,
-    pendingFileIDs: [],
-    pendingFilesText: ''
+    sending: false,
+    pendingFiles: []
   },
 
   showBusy(title = '处理中...') {
@@ -48,18 +48,6 @@ Page({
     });
   },
 
-  fillSummaryPrompt() {
-    const tpl = [
-      '请帮我处理我上传的文档，并按以下格式输出：',
-      '1) 三句话总结全文',
-      '2) 关键要点（3-8条）',
-      '3) 可执行建议（按优先级）',
-      '4) 如果是合同/论文/报告，请列出风险点或疑问点',
-      '5) 最后给出一个“给小白看的简版结论”'
-    ].join('\n');
-    this.setData({ input: tpl });
-  },
-
   async loadList() {
     const token = app.globalData.token || wx.getStorageSync('token') || '';
     try {
@@ -81,23 +69,25 @@ Page({
     this.setData({ uploading: true });
 
     wx.chooseMessageFile({
-      count: 1,
+      count: 5,
       type: 'file',
       extension: ['pdf', 'doc', 'docx', 'txt'],
       success: async (r) => {
         try {
-          const f = (r.tempFiles || [])[0];
-          if (!f || !f.path) return;
+          const files = (r.tempFiles || []).filter((f) => f && f.path);
+          if (!files.length) return;
+
           this.showBusy('上传文件中...');
-          const cloudPath = `ai-input/${Date.now()}_${f.name || 'file'}`;
-          const up = await wx.cloud.uploadFile({ cloudPath, filePath: f.path });
-          const fileID = up.fileID;
-          const arr = [...this.data.pendingFileIDs, fileID];
-          this.setData({
-            pendingFileIDs: arr,
-            pendingFilesText: `${arr.length}个文件待发送`
-          });
-          wx.showToast({ title: '文件已加入', icon: 'success' });
+          const uploaded = [];
+          for (const f of files) {
+            const cloudPath = `ai-input/${Date.now()}_${Math.random().toString(16).slice(2)}_${f.name || 'file'}`;
+            const up = await wx.cloud.uploadFile({ cloudPath, filePath: f.path });
+            uploaded.push({ fileID: up.fileID, name: f.name || '文件' });
+          }
+
+          const next = [...this.data.pendingFiles, ...uploaded];
+          this.setData({ pendingFiles: next });
+          wx.showToast({ title: `已加入${uploaded.length}个文件`, icon: 'success' });
         } catch (e) {
           wx.showToast({ title: '上传失败', icon: 'none' });
         } finally {
@@ -109,6 +99,19 @@ Page({
     });
   },
 
+  removePendingFile(e) {
+    const idx = Number((e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.index) || -1);
+    if (idx < 0) return;
+    const arr = [...this.data.pendingFiles];
+    arr.splice(idx, 1);
+    this.setData({ pendingFiles: arr });
+  },
+
+  clearPendingFiles() {
+    if (!this.data.pendingFiles.length) return;
+    this.setData({ pendingFiles: [] });
+  },
+
   openFile(e) {
     const url = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.url) || '';
     if (!url) {
@@ -117,6 +120,7 @@ Page({
     }
     wx.downloadFile({
       url,
+      timeout: 25000,
       success: (res) => {
         if (res.statusCode === 200 && res.tempFilePath) {
           wx.openDocument({ filePath: res.tempFilePath, showMenu: true });
@@ -129,10 +133,13 @@ Page({
   },
 
   async send() {
+    if (this.data.sending) return;
+
     const message = (this.data.input || '').trim();
-    const fileIDs = this.data.pendingFileIDs || [];
+    const fileIDs = (this.data.pendingFiles || []).map((f) => f.fileID).filter(Boolean);
     if (!message && !fileIDs.length) return;
 
+    this.setData({ sending: true });
     try {
       this.showBusy('思考中...');
       const token = app.globalData.token || wx.getStorageSync('token') || '';
@@ -142,16 +149,18 @@ Page({
       });
       const ret = res.result || {};
       if (!ret.success) {
-        wx.showToast({ title: ret.message || '发送失败', icon: 'none' });
+        const tip = /timeout/i.test(ret.message || '') ? '请求超时，请重试' : (ret.message || '发送失败');
+        wx.showToast({ title: tip, icon: 'none' });
         return;
       }
 
-      this.setData({ input: '', pendingFileIDs: [], pendingFilesText: '' });
+      this.setData({ input: '', pendingFiles: [] });
       await this.loadList();
     } catch (e) {
       wx.showToast({ title: '发送失败(网络)', icon: 'none' });
     } finally {
       this.hideBusy();
+      this.setData({ sending: false });
     }
   },
 
