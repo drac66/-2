@@ -132,6 +132,20 @@ Page({
     let url = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.url) || '';
     const fileID = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.fileid) || '';
 
+    // 优先走云存储 fileID 直下，稳定性更高
+    if (fileID) {
+      try {
+        const d = await wx.cloud.downloadFile({ fileID });
+        const p = (d && d.tempFilePath) || '';
+        if (p) {
+          wx.openDocument({ filePath: p, showMenu: true });
+          return;
+        }
+      } catch (err) {
+        // 继续走临时链接兜底
+      }
+    }
+
     if (!url && fileID) {
       try {
         const t = await wx.cloud.getTempFileURL({ fileList: [fileID] });
@@ -196,7 +210,8 @@ Page({
           const token = app.globalData.token || wx.getStorageSync('token') || '';
           const res = await wx.cloud.callFunction({
             name: 'aiChat',
-            data: { action: 'regenerateFile', token, fileID: fileID || '' }
+            data: { action: 'regenerateFile', token, fileID: fileID || '' },
+            timeout: 60000
           });
           const ret = res.result || {};
           if (!ret.success) {
