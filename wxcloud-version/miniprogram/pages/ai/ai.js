@@ -119,23 +119,61 @@ Page({
     this.setData({ pendingFiles: [] });
   },
 
-  openFile(e) {
-    const url = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.url) || '';
+  async openFile(e) {
+    let url = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.url) || '';
+    const fileID = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.fileid) || '';
+
+    if (!url && fileID) {
+      try {
+        const t = await wx.cloud.getTempFileURL({ fileList: [fileID] });
+        url = (((t || {}).fileList || [])[0] || {}).tempFileURL || '';
+      } catch (err) {
+        url = '';
+      }
+    }
+
     if (!url) {
-      wx.showToast({ title: '文件链接已过期，请刷新', icon: 'none' });
+      wx.showToast({ title: '链接已失效，请重试', icon: 'none' });
       return;
     }
+
     wx.downloadFile({
       url,
       timeout: 25000,
-      success: (res) => {
+      success: async (res) => {
         if (res.statusCode === 200 && res.tempFilePath) {
           wx.openDocument({ filePath: res.tempFilePath, showMenu: true });
-        } else {
-          wx.showToast({ title: '文件下载失败', icon: 'none' });
+          return;
         }
+
+        // 下载失败时再用 fileID 换一次新链接重试
+        if (fileID) {
+          try {
+            const t = await wx.cloud.getTempFileURL({ fileList: [fileID] });
+            const retryUrl = (((t || {}).fileList || [])[0] || {}).tempFileURL || '';
+            if (!retryUrl) throw new Error('no retry url');
+
+            wx.downloadFile({
+              url: retryUrl,
+              timeout: 25000,
+              success: (r2) => {
+                if (r2.statusCode === 200 && r2.tempFilePath) {
+                  wx.openDocument({ filePath: r2.tempFilePath, showMenu: true });
+                } else {
+                  wx.showToast({ title: '文件打开失败', icon: 'none' });
+                }
+              },
+              fail: () => wx.showToast({ title: '文件打开失败', icon: 'none' })
+            });
+            return;
+          } catch (err) {
+            // fall through
+          }
+        }
+
+        wx.showToast({ title: '文件打开失败', icon: 'none' });
       },
-      fail: () => wx.showToast({ title: '文件下载失败', icon: 'none' })
+      fail: () => wx.showToast({ title: '文件打开失败', icon: 'none' })
     });
   },
 

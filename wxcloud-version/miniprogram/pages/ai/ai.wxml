@@ -18,7 +18,7 @@
 
             <block wx:if="{{item.files && item.files.length}}">
               <block wx:for="{{item.files}}" wx:key="fileID">
-                <view class="file-link" data-url="{{item.tempFileURL}}" bindtap="openFile">
+                <view class="file-link" data-url="{{item.tempFileURL}}" data-fileid="{{item.fileID}}" bindtap="openFile">
                   📎 {{item.name || '文件'}}（点我打开）
                 </view>
               </block>
