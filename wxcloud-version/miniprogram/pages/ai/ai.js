@@ -150,7 +150,7 @@ Page({
   },
 
   async offerRegenerate(fileID) {
-    wx.showLoading({ title: '正在重生成...', mask: true });
+    wx.showToast({ title: '正在重生成...', icon: 'none', duration: 2000 });
     try {
       const token = app.globalData.token || wx.getStorageSync('token') || '';
       const res = await wx.cloud.callFunction({
@@ -167,8 +167,6 @@ Page({
       await this.loadList();
     } catch (_) {
       wx.showToast({ title: '重生成超时，请稍后重试', icon: 'none' });
-    } finally {
-      wx.hideLoading();
     }
   },
 
@@ -184,7 +182,8 @@ Page({
       const token = app.globalData.token || wx.getStorageSync('token') || '';
       const res = await wx.cloud.callFunction({
         name: 'aiChat',
-        data: { action: 'chat', token, message, fileIDs }
+        data: { action: 'chat', token, message, fileIDs },
+        timeout: 120000
       });
       const ret = res.result || {};
       if (!ret.success) {

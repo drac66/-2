@@ -137,6 +137,15 @@ function sanitizeGeneratedDocText(text) {
   return lines.join('\n').trim();
 }
 
+function cleanPromptText(text) {
+  return String(text || '')
+    .replace(/https?:\/\/[^\s]+/g, '')
+    .replace(/【链接已隐藏，请点下方文件卡片】/g, '')
+    .replace(/文件已重新生成，点下方卡片打开。/g, '')
+    .replace(/文件已生成[:：]?\s*[^\n]*/g, '')
+    .trim();
+}
+
 function firstUrl(text) {
   const m = String(text || '').match(/https?:\/\/[^\s]+/);
   return m ? m[0] : '';
@@ -336,6 +345,10 @@ exports.main = async (event) => {
 
   const recent = await db.collection('ai_messages').where({ owner: openid }).orderBy('created_at', 'desc').limit(20).get();
   const history = (recent.data || []).reverse();
+  // 自动文档模式下，避免历史里的“链接/提示语”污染模型输出
+  const promptHistory = autoFileMode
+    ? history.filter((m) => m.role !== 'assistant').slice(-8)
+    : history;
 
   const messages = [
     {
@@ -348,15 +361,16 @@ exports.main = async (event) => {
         content: '当前任务用于生成可下载Word文档。请只输出最终正文内容本身，不要写“已生成”“点击下载”“下面是”等任何说明性句子。'
       }]
       : []),
-    ...history.map((m) => {
+    ...promptHistory.map((m) => {
+      const baseText = cleanPromptText(m.content || '');
       const fileText = (m.files || []).length
         ? `\n\n用户上传文件（临时链接，可能过期）:\n${m.files.map((f) => `- ${f.tempFileURL || f.fileID}`).join('\n')}`
         : '';
       return {
         role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: `${m.content || ''}${fileText}`.trim()
+        content: `${baseText}${fileText}`.trim()
       };
-    })
+    }).filter((m) => m.content)
   ];
 
   const base = String(baseUrl || '').replace(/\/$/, '');
