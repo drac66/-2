@@ -32,7 +32,7 @@ function requestJson(url, method, headers, bodyObj) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'User-Agent': 'OpenClaw-MiniProgram/aiChat',
         ...headers
       },
@@ -79,7 +79,6 @@ async function requestJsonWithRetry(url, method, headers, bodyObj, retry = 1) {
   throw lastErr || new Error('request failed');
 }
 
-
 function guessNameFromFileID(fileID) {
   const part = String(fileID || '').split('/').pop() || 'file';
   return part.replace(/^\d+_/, '') || part;
@@ -92,6 +91,38 @@ async function buildFileHints(fileIDs) {
     fileID: f.fileID,
     tempFileURL: f.tempFileURL || '',
     name: guessNameFromFileID(f.fileID)
+  }));
+}
+
+async function refreshMessageFiles(rows) {
+  const allFileIDs = [];
+  (rows || []).forEach((m) => {
+    (m.files || []).forEach((f) => {
+      if (f && f.fileID) allFileIDs.push(f.fileID);
+    });
+  });
+
+  const uniq = [...new Set(allFileIDs)];
+  if (!uniq.length) return rows || [];
+
+  let tempMap = {};
+  try {
+    const temp = await cloud.getTempFileURL({ fileList: uniq });
+    tempMap = (temp.fileList || []).reduce((acc, it) => {
+      acc[it.fileID] = it.tempFileURL || '';
+      return acc;
+    }, {});
+  } catch (e) {
+    tempMap = {};
+  }
+
+  return (rows || []).map((m) => ({
+    ...m,
+    files: (m.files || []).map((f) => ({
+      ...f,
+      name: f.name || guessNameFromFileID(f.fileID),
+      tempFileURL: tempMap[f.fileID] || f.tempFileURL || ''
+    }))
   }));
 }
 
@@ -110,7 +141,9 @@ async function createTextFile(openid, text, ext = 'txt') {
     const doc = new Document({
       sections: [{
         properties: {},
-        children: lines.map((line) => new Paragraph({ children: [new TextRun(line || ' ')] }))
+        children: lines.map((line) => new Paragraph({
+          children: [new TextRun(line || ' ')]
+        }))
       }]
     });
     fileContent = await Packer.toBuffer(doc);
@@ -126,10 +159,11 @@ async function createTextFile(openid, text, ext = 'txt') {
   return { fileID, tempFileURL: tempUrl, name: filename };
 }
 
+exports.main = async (event) => {
   const userAuth = auth();
   if (!userAuth) return { success: false, message: 'unauthorized', data: null };
 
-  const { action = 'chat', message = '', fileIDs = [], text = '', filename = '', format = '' } = event || {};
+  const { action = 'chat', message = '', fileIDs = [], text = '', format = '' } = event || {};
   const { openid } = userAuth;
 
   if (action === 'list') {
@@ -177,7 +211,7 @@ async function createTextFile(openid, text, ext = 'txt') {
 
   const baseUrl = process.env.AI_BASE_URL || 'https://cmdme.cn';
   const apiKey = process.env.AI_API_KEY || '';
-  const model = process.env.AI_MODEL || 'gpt';
+  const model = process.env.AI_MODEL || 'gpt-5.3-codex';
 
   if (!apiKey) return { success: false, message: 'AI_API_KEY missing', data: null };
 
@@ -220,8 +254,6 @@ async function createTextFile(openid, text, ext = 'txt') {
       { model, messages, temperature: 0.7 },
       1
     );
-
-    // 命中可用端点后直接退出；404 继续尝试下一个候选
     if (resp.status !== 404) break;
   }
 
@@ -248,4 +280,3 @@ async function createTextFile(openid, text, ext = 'txt') {
 
   return { success: true, message: 'ok', data: { reply: answer } };
 };
-
