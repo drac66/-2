@@ -16,6 +16,18 @@ Page({
     pendingFilesText: ''
   },
 
+  showBusy(title = '处理中...') {
+    if (this._loadingShown) return;
+    this._loadingShown = true;
+    wx.showLoading({ title, mask: true });
+  },
+
+  hideBusy() {
+    if (!this._loadingShown) return;
+    this._loadingShown = false;
+    wx.hideLoading();
+  },
+
   onInput(e) {
     this.setData({ input: e.detail.value || '' });
   },
@@ -38,14 +50,18 @@ Page({
 
   async loadList() {
     const token = app.globalData.token || wx.getStorageSync('token') || '';
-    const res = await wx.cloud.callFunction({ name: 'aiChat', data: { action: 'list', token } });
-    const ret = res.result || {};
-    if (!ret.success) {
-      wx.showToast({ title: ret.message || '加载失败', icon: 'none' });
-      return;
+    try {
+      const res = await wx.cloud.callFunction({ name: 'aiChat', data: { action: 'list', token } });
+      const ret = res.result || {};
+      if (!ret.success) {
+        wx.showToast({ title: ret.message || '加载失败', icon: 'none' });
+        return;
+      }
+      const list = (ret.data || []).map((it) => ({ ...it, show_time: timeText(it.created_at) }));
+      this.setData({ list });
+    } catch (e) {
+      wx.showToast({ title: '加载失败(网络)', icon: 'none' });
     }
-    const list = (ret.data || []).map((it) => ({ ...it, show_time: timeText(it.created_at) }));
-    this.setData({ list });
   },
 
   async chooseFile() {
@@ -60,7 +76,7 @@ Page({
         try {
           const f = (r.tempFiles || [])[0];
           if (!f || !f.path) return;
-          wx.showLoading({ title: '上传文件中...' });
+          this.showBusy('上传文件中...');
           const cloudPath = `ai-input/${Date.now()}_${f.name || 'file'}`;
           const up = await wx.cloud.uploadFile({ cloudPath, filePath: f.path });
           const fileID = up.fileID;
@@ -108,7 +124,7 @@ Page({
     }
 
     try {
-      wx.showLoading({ title: '生成文件中...' });
+      this.showBusy('生成文件中...');
       const token = app.globalData.token || wx.getStorageSync('token') || '';
       const res = await wx.cloud.callFunction({
         name: 'aiChat',
@@ -139,7 +155,7 @@ Page({
     if (!message && !fileIDs.length) return;
 
     try {
-      wx.showLoading({ title: '思考中...' });
+      this.showBusy('思考中...');
       const token = app.globalData.token || wx.getStorageSync('token') || '';
       const res = await wx.cloud.callFunction({
         name: 'aiChat',
@@ -162,5 +178,13 @@ Page({
 
   onShow() {
     this.loadList();
+  },
+
+  onHide() {
+    this.hideBusy();
+  },
+
+  onUnload() {
+    this.hideBusy();
   }
 });
