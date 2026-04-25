@@ -36,10 +36,37 @@ exports.main = async () => {
     }
   }));
 
-  const data = rows.map((it) => ({
-    ...it,
-    owner_name: it.owner_name || nameMap[it.owner] || it.owner
-  }));
+  // 在云端统一换取临时链接，避免前端因文件权限差异导致“文字可见但图片不可见”
+  const fileIDs = rows
+    .map((it) => it.media_url)
+    .filter((v) => typeof v === 'string' && v.startsWith('cloud://'));
+
+  let tempMap = {};
+  if (fileIDs.length) {
+    try {
+      const tmp = await cloud.getTempFileURL({ fileList: fileIDs });
+      tempMap = (tmp.fileList || []).reduce((m, it) => {
+        // 临时链接失败时，tempFileURL 可能为空；保留原值兜底
+        m[it.fileID] = it.tempFileURL || '';
+        return m;
+      }, {});
+    } catch (e) {
+      // 忽略，走原始 fileID 兜底
+      tempMap = {};
+    }
+  }
+
+  const data = rows.map((it) => {
+    const fileID = it.media_url || '';
+    const tempUrl = fileID.startsWith('cloud://') ? (tempMap[fileID] || fileID) : fileID;
+    return {
+      ...it,
+      media_file_id: fileID,
+      media_url: tempUrl,
+      owner_name: it.owner_name || nameMap[it.owner] || it.owner
+    };
+  });
 
   return { success: true, message: 'ok', data };
 };
+

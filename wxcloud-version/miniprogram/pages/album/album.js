@@ -123,33 +123,9 @@ Page({
       }
 
       const list = ret.data || [];
-      const fileIDs = list
-        .map((it) => it.media_url)
-        .filter((v) => typeof v === 'string' && v.startsWith('cloud://'));
-
-      let tempMap = {};
-      if (fileIDs.length) {
-        try {
-          const tmp = await retry(
-            () => withTimeout(wx.cloud.getTempFileURL({ fileList: fileIDs }), 12000, 'getTempFileURL'),
-            { times: 2, delayMs: 500 }
-          );
-          tempMap = (tmp.fileList || []).reduce((m, it) => {
-            m[it.fileID] = it.tempFileURL || '';
-            return m;
-          }, {});
-        } catch (e) {
-          console.warn('getTempFileURL failed:', e);
-          wx.showToast({ title: '图片链接获取超时，已显示文本', icon: 'none' });
-        }
-      }
 
       const merged = list.map((it) => {
-        const fileID = it.media_url || '';
         const show_time = fmtTime(it.created_at);
-        if (fileID.startsWith('cloud://')) {
-          return { ...it, media_url: tempMap[fileID] || '', show_time };
-        }
         return { ...it, show_time };
       });
 
@@ -224,3 +200,4 @@ Page({
     this.loadList(true).finally(() => wx.stopPullDownRefresh());
   }
 });
+
