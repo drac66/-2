@@ -117,11 +117,8 @@ function sanitizeBaseName(name) {
   return base.slice(0, 64);
 }
 
-function hhmmNow() {
-  const d = new Date();
-  const hh = `${d.getHours()}`.padStart(2, '0');
-  const mm = `${d.getMinutes()}`.padStart(2, '0');
-  return `${hh}${mm}`;
+function stripUrls(text) {
+  return String(text || '').replace(/https?:\/\/[^\s]+/g, '【链接已隐藏，请点下方文件卡片】');
 }
 
 async function getNickname(openid) {
@@ -208,7 +205,7 @@ async function createTextFile(openid, text, customBaseName = '') {
   const temp = await cloud.getTempFileURL({ fileList: [fileID] });
   const tempUrl = ((temp.fileList || [])[0] || {}).tempFileURL || '';
 
-  return { fileID, tempFileURL: tempUrl, name: filename };
+  return { fileID, tempFileURL: tempUrl, name: filename, sourceText: body, baseName };
 }
 
 exports.main = async (event) => {
@@ -224,8 +221,36 @@ exports.main = async (event) => {
     return { success: true, message: 'ok', data: rows };
   }
 
-  if (action === 'exportTxt') {
-    return { success: false, message: 'disabled', data: null };
+  if (action === 'regenerateFile') {
+    const targetFileID = String((event || {}).fileID || '').trim();
+    if (!targetFileID) return { success: false, message: 'fileID required', data: null };
+
+    const _ = db.command;
+    const r = await db.collection('ai_messages')
+      .where({ owner: openid, files: _.elemMatch({ fileID: targetFileID }) })
+      .orderBy('created_at', 'desc')
+      .limit(1)
+      .get();
+
+    const hit = (r.data || [])[0] || null;
+    if (!hit) return { success: false, message: '未找到可重生成的文件', data: null };
+
+    const old = (hit.files || []).find((f) => f.fileID === targetFileID) || null;
+    if (!old || !old.sourceText) return { success: false, message: '缺少源内容，无法重生成', data: null };
+
+    const file = await createTextFile(openid, old.sourceText, old.baseName || old.name || '文件');
+
+    await db.collection('ai_messages').add({
+      data: {
+        owner: openid,
+        role: 'assistant',
+        content: '文件已重新生成，点下方卡片打开。',
+        files: [file],
+        created_at: new Date()
+      }
+    });
+
+    return { success: true, message: 'ok', data: file };
   }
 
   const userText = String(message || '').trim();
@@ -324,7 +349,8 @@ exports.main = async (event) => {
     return { success: false, message: `ai http ${resp ? resp.status : 'unknown'}`, data: detail };
   }
 
-  const answer = (((resp.data || {}).choices || [])[0] || {}).message?.content || '（无回复）';
+  const answerRaw = (((resp.data || {}).choices || [])[0] || {}).message?.content || '（无回复）';
+  const answer = stripUrls(answerRaw);
 
   await db.collection('ai_messages').add({
     data: {

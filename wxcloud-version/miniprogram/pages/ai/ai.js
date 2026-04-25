@@ -133,7 +133,7 @@ Page({
     }
 
     if (!url) {
-      wx.showToast({ title: '链接已失效，请重试', icon: 'none' });
+      this.offerRegenerate(fileID);
       return;
     }
 
@@ -146,7 +146,6 @@ Page({
           return;
         }
 
-        // 下载失败时再用 fileID 换一次新链接重试
         if (fileID) {
           try {
             const t = await wx.cloud.getTempFileURL({ fileList: [fileID] });
@@ -160,10 +159,10 @@ Page({
                 if (r2.statusCode === 200 && r2.tempFilePath) {
                   wx.openDocument({ filePath: r2.tempFilePath, showMenu: true });
                 } else {
-                  wx.showToast({ title: '文件打开失败', icon: 'none' });
+                  this.offerRegenerate(fileID);
                 }
               },
-              fail: () => wx.showToast({ title: '文件打开失败', icon: 'none' })
+              fail: () => this.offerRegenerate(fileID)
             });
             return;
           } catch (err) {
@@ -171,9 +170,38 @@ Page({
           }
         }
 
-        wx.showToast({ title: '文件打开失败', icon: 'none' });
+        this.offerRegenerate(fileID);
       },
-      fail: () => wx.showToast({ title: '文件打开失败', icon: 'none' })
+      fail: () => this.offerRegenerate(fileID)
+    });
+  },
+
+  offerRegenerate(fileID) {
+    wx.showModal({
+      title: '打开失败',
+      content: '链接可能过期，是否重新生成同名文件？',
+      success: async (m) => {
+        if (!m.confirm || !fileID) return;
+        try {
+          this.showBusy('重新生成中...');
+          const token = app.globalData.token || wx.getStorageSync('token') || '';
+          const res = await wx.cloud.callFunction({
+            name: 'aiChat',
+            data: { action: 'regenerateFile', token, fileID }
+          });
+          const ret = res.result || {};
+          if (!ret.success) {
+            wx.showToast({ title: '重生成失败，请重试', icon: 'none' });
+            return;
+          }
+          wx.showToast({ title: '已重生成', icon: 'success' });
+          await this.loadList();
+        } catch (e) {
+          wx.showToast({ title: '重生成失败，请重试', icon: 'none' });
+        } finally {
+          this.hideBusy();
+        }
+      }
     });
   },
 
@@ -194,7 +222,7 @@ Page({
       });
       const ret = res.result || {};
       if (!ret.success) {
-        const tip = /timeout/i.test(ret.message || '') ? '请求超时，请重试' : (ret.message || '发送失败');
+        const tip = /timeout/i.test(ret.message || '') ? '请求超时，请稍后重试' : '服务繁忙，请稍后重试';
         wx.showToast({ title: tip, icon: 'none' });
         return;
       }
