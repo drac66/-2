@@ -7,6 +7,11 @@ function timeText(v) {
   return `${hh}:${mm}`;
 }
 
+function firstUrl(text) {
+  const m = String(text || '').match(/https?:\/\/[^\s]+/);
+  return m ? m[0] : '';
+}
+
 Page({
   data: {
     input: '',
@@ -63,7 +68,11 @@ Page({
         wx.showToast({ title: ret.message || '加载失败', icon: 'none' });
         return;
       }
-      const list = (ret.data || []).map((it) => ({ ...it, show_time: timeText(it.created_at) }));
+      const list = (ret.data || []).map((it) => ({
+        ...it,
+        show_time: timeText(it.created_at),
+        fallbackUrl: firstUrl(it.content)
+      }));
       this.setData({ list });
       this.scrollToBottom();
     } catch (e) {
