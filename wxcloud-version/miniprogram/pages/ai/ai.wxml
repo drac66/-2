@@ -2,23 +2,27 @@
 <view class="page-mask"></view>
 
 <view class="container page-shell">
-  <view class="card" style="height: 62vh; overflow-y: auto;">
+  <view class="card chat-wrap">
     <view class="title">GPT助手</view>
     <block wx:for="{{list}}" wx:key="_id">
-      <view class="list-gap" style="margin-top: 14rpx;">
-        <view class="meta">{{item.role === 'assistant' ? 'GPT' : '我'}} · {{item.show_time}}</view>
-        <view style="white-space: pre-wrap; margin-top: 6rpx;">{{item.content}}</view>
+      <view class="msg-row {{item.role==='assistant' ? 'assistant' : 'user'}}">
+        <view
+          class="msg-bubble {{item.role==='assistant' ? 'assistant' : 'user'}}"
+          data-text="{{item.content}}"
+          data-role="{{item.role}}"
+          bindlongpress="onMessageLongPress"
+        >
+          <view class="msg-meta">{{item.role === 'assistant' ? 'GPT' : '我'}} · {{item.show_time}}</view>
+          <view class="msg-content">{{item.content}}</view>
 
-        <view wx:if="{{item.role==='assistant' && item.content}}" style="margin-top:10rpx;">
-          <button class="btn-soft" size="mini" data-text="{{item.content}}" bindtap="exportAsTxt">导出为txt</button>
+          <block wx:if="{{item.files && item.files.length}}">
+            <block wx:for="{{item.files}}" wx:key="fileID">
+              <view class="file-link" data-url="{{item.tempFileURL}}" bindtap="openFile">
+                📎 {{item.name || '文件'}}（点我打开）
+              </view>
+            </block>
+          </block>
         </view>
-
-        <view wx:if="{{item.files && item.files.length}}" class="meta" style="margin-top: 6rpx;">文件：</view>
-        <block wx:for="{{item.files}}" wx:key="fileID">
-          <view class="meta" style="margin-top:4rpx;color:#2f80ed;" data-url="{{item.tempFileURL}}" bindtap="openFile">
-            📎 {{item.name || '文件'}}（点我打开）
-          </view>
-        </block>
       </view>
     </block>
   </view>

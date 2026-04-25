@@ -36,6 +36,18 @@ Page({
     this.send();
   },
 
+  onMessageLongPress(e) {
+    const role = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.role) || '';
+    const text = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.text) || '';
+    if (role !== 'assistant' || !text) return;
+
+    wx.setClipboardData({
+      data: text,
+      success: () => wx.showToast({ title: '已复制GPT内容', icon: 'success' }),
+      fail: () => wx.showToast({ title: '复制失败', icon: 'none' })
+    });
+  },
+
   fillSummaryPrompt() {
     const tpl = [
       '请帮我处理我上传的文档，并按以下格式输出：',
@@ -114,39 +126,6 @@ Page({
       },
       fail: () => wx.showToast({ title: '文件下载失败', icon: 'none' })
     });
-  },
-
-  async exportAsTxt(e) {
-    const text = (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.text) || '';
-    if (!text) {
-      wx.showToast({ title: '没有可导出的内容', icon: 'none' });
-      return;
-    }
-
-    try {
-      this.showBusy('生成文件中...');
-      const token = app.globalData.token || wx.getStorageSync('token') || '';
-      const res = await wx.cloud.callFunction({
-        name: 'aiChat',
-        data: {
-          action: 'exportTxt',
-          token,
-          text,
-          filename: `gpt_reply_${Date.now()}.txt`
-        }
-      });
-      const ret = res.result || {};
-      if (!ret.success) {
-        wx.showToast({ title: ret.message || '导出失败', icon: 'none' });
-        return;
-      }
-      wx.showToast({ title: '已生成文件', icon: 'success' });
-      await this.loadList();
-    } catch (err) {
-      wx.showToast({ title: '导出失败', icon: 'none' });
-    } finally {
-      this.hideBusy();
-    }
   },
 
   async send() {

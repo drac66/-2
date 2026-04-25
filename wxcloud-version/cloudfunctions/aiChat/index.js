@@ -31,6 +31,8 @@ function requestJson(url, method, headers, bodyObj) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
+        'Accept': 'application/json',
+        'User-Agent': 'OpenClaw-MiniProgram/aiChat',
         ...headers
       },
       timeout: 30000
@@ -40,9 +42,9 @@ function requestJson(url, method, headers, bodyObj) {
       res.on('end', () => {
         try {
           const parsed = raw ? JSON.parse(raw) : {};
-          resolve({ status: res.statusCode || 0, data: parsed });
+          resolve({ status: res.statusCode || 0, data: parsed, raw });
         } catch (e) {
-          reject(new Error(`invalid json response: ${raw.slice(0, 500)}`));
+          resolve({ status: res.statusCode || 0, data: null, raw });
         }
       });
     });
@@ -53,6 +55,29 @@ function requestJson(url, method, headers, bodyObj) {
     req.end();
   });
 }
+
+async function requestJsonWithRetry(url, method, headers, bodyObj, retry = 1) {
+  let lastErr = null;
+  for (let i = 0; i <= retry; i++) {
+    try {
+      const resp = await requestJson(url, method, headers, bodyObj);
+      if (resp.status >= 200 && resp.status < 300) return resp;
+      if (resp.status >= 500 && i < retry) {
+        await new Promise((r) => setTimeout(r, 450));
+        continue;
+      }
+      return resp;
+    } catch (e) {
+      lastErr = e;
+      if (i < retry) {
+        await new Promise((r) => setTimeout(r, 450));
+        continue;
+      }
+    }
+  }
+  throw lastErr || new Error('request failed');
+}
+
 
 function guessNameFromFileID(fileID) {
   const part = String(fileID || '').split('/').pop() || 'file';
@@ -178,15 +203,17 @@ exports.main = async (event) => {
     })
   ];
 
-  const resp = await requestJson(
+  const resp = await requestJsonWithRetry(
     `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`,
     'POST',
     { Authorization: `Bearer ${apiKey}` },
-    { model, messages, temperature: 0.7 }
+    { model, messages, temperature: 0.7 },
+    1
   );
 
   if (resp.status < 200 || resp.status >= 300) {
-    return { success: false, message: `ai http ${resp.status}`, data: resp.data || null };
+    const detail = resp.data || { raw: String(resp.raw || '').slice(0, 500) };
+    return { success: false, message: `ai http ${resp.status}`, data: detail };
   }
 
   const answer = (((resp.data || {}).choices || [])[0] || {}).message?.content || '（无回复）';
