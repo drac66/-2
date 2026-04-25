@@ -112,6 +112,22 @@ function extractDirectFileIntent(text) {
   return { content, filename, format: 'docx' };
 }
 
+function shouldAutoGenerateFileFromPrompt(text) {
+  const s = String(text || '').trim();
+  if (!s) return false;
+  // 典型需求：让 AI 先生成，再发文件
+  return /(发给我|给我|导出|生成).*(word|文档|文件)/i.test(s) || /(出师表|原文|作文|总结|报告|方案)/.test(s);
+}
+
+function extractPreferredFileBaseName(text) {
+  const s = String(text || '').trim();
+  if (!s) return '';
+  const m = s.match(/(?:文件名|名字)(?:叫|为|是|：|:)\s*([^\n，。,.]+)/i);
+  if (m && m[1]) return sanitizeBaseName(m[1]);
+  // 无明确文件名时，用问题前 12 字做短名
+  return sanitizeBaseName(s.replace(/[？?。！!]/g, '').slice(0, 12));
+}
+
 function sanitizeBaseName(name) {
   const base = String(name || '').trim().replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
   return base.slice(0, 64);
@@ -379,6 +395,17 @@ exports.main = async (event) => {
   const assistantFiles = rawUrl
     ? [{ fileID: '', tempFileURL: rawUrl, name: '文件（点我打开）' }]
     : [];
+
+  // 用户明确希望“AI生成后直接给文件”时，自动把回答落成 Word 附件
+  if (shouldAutoGenerateFileFromPrompt(userText)) {
+    try {
+      const autoBaseName = extractPreferredFileBaseName(userText) || '';
+      const autoFile = await createTextFile(openid, answerRaw, autoBaseName);
+      assistantFiles.push(autoFile);
+    } catch (e) {
+      // 自动落文件失败不影响文本回复
+    }
+  }
 
   await db.collection('ai_messages').add({
     data: {
