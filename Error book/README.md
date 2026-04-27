@@ -30,7 +30,15 @@
 - `GET /mistakes/random`
 - `GET /stats`
 
-## 快速运行
+## 一键启动（Windows）
+在 `Error book` 根目录：
+```bat
+run-all.bat
+```
+- 会自动拉起后端和 Java 电脑端（分别在新窗口）
+- 手机端可按提示执行 `run-mobile.bat` 或手动 `flutter run`
+
+## 快速运行（手动）
 ### 1) 启动后端
 ```bash
 cd backend/mock-api
