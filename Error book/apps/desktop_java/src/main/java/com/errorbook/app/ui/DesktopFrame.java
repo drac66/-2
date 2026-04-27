@@ -1,17 +1,17 @@
 package com.errorbook.app.ui;
 
 import com.errorbook.app.model.Mistake;
-import com.errorbook.app.repository.MistakeRepository;
+import com.errorbook.app.repository.HttpMistakeRepository;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 public class DesktopFrame extends JFrame {
-    private final MistakeRepository repo = new MistakeRepository(Path.of("data", "mistakes.json"));
+    private final HttpMistakeRepository repo = new HttpMistakeRepository("http://127.0.0.1:8787");
 
     private final JTextField searchField = new JTextField();
     private final DefaultListModel<String> categoryModel = new DefaultListModel<>();
@@ -21,6 +21,7 @@ public class DesktopFrame extends JFrame {
     };
     private final JTable table = new JTable(tableModel);
     private final JTextArea detail = new JTextArea();
+    private final JLabel statsLabel = new JLabel("总错题: 0");
 
     private List<Mistake> current = List.of();
 
@@ -30,8 +31,6 @@ public class DesktopFrame extends JFrame {
         setSize(1220, 780);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-
-        repo.load();
 
         add(buildTopBar(), BorderLayout.NORTH);
         add(buildMainSplit(), BorderLayout.CENTER);
@@ -68,7 +67,11 @@ public class DesktopFrame extends JFrame {
         right.add(addBtn);
         right.add(randomBtn);
 
-        panel.add(title, BorderLayout.WEST);
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        left.add(title);
+        left.add(statsLabel);
+
+        panel.add(left, BorderLayout.WEST);
         panel.add(right, BorderLayout.EAST);
         return panel;
     }
@@ -150,6 +153,7 @@ public class DesktopFrame extends JFrame {
         tableModel.setRowCount(0);
         for (Mistake m : current) tableModel.addRow(m.toRow());
         detail.setText(current.isEmpty() ? "暂无数据" : "选择一条错题查看详情");
+        refreshStats();
     }
 
     private Mistake selected() {
@@ -162,6 +166,22 @@ public class DesktopFrame extends JFrame {
         Mistake m = selected();
         if (m == null) { detail.setText("选择一条错题查看详情"); return; }
         detail.setText("题干:\n" + m.getQuestion() + "\n\n错误答案:\n" + m.getWrongAnswer() + "\n\n正确答案:\n" + m.getCorrectAnswer() + "\n\n错误原因:\n" + m.getReason() + "\n\n分类: " + m.getCategory() + "\nID: " + m.getId());
+    }
+
+    private void refreshStats() {
+        int total = repo.statsTotal();
+        Map<String, Integer> by = repo.statsByCategory();
+        StringBuilder sb = new StringBuilder("总错题: ").append(total);
+        if (!by.isEmpty()) {
+            sb.append(" | ");
+            boolean first = true;
+            for (Map.Entry<String, Integer> e : by.entrySet()) {
+                if (!first) sb.append(" · ");
+                sb.append(e.getKey()).append(":").append(e.getValue());
+                first = false;
+            }
+        }
+        statsLabel.setText(sb.toString());
     }
 
     private void onAdd() {

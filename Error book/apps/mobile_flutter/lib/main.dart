@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(const MobileApp());
 
@@ -20,6 +23,80 @@ class Mistake {
     required this.reason,
     required this.category,
   });
+
+  factory Mistake.fromJson(Map<String, dynamic> j) => Mistake(
+        id: (j['id'] ?? '').toString(),
+        question: (j['question'] ?? '').toString(),
+        wrongAnswer: (j['wrongAnswer'] ?? '').toString(),
+        correctAnswer: (j['correctAnswer'] ?? '').toString(),
+        reason: (j['reason'] ?? '').toString(),
+        category: (j['category'] ?? '未分类').toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'question': question,
+        'wrongAnswer': wrongAnswer,
+        'correctAnswer': correctAnswer,
+        'reason': reason,
+        'category': category,
+      };
+}
+
+class MistakeApi {
+  // Android 模拟器请改成: http://10.0.2.2:8787
+  final String baseUrl;
+  MistakeApi({this.baseUrl = 'http://127.0.0.1:8787'});
+
+  Future<List<Mistake>> list({String keyword = '', String category = '全部分类'}) async {
+    final uri = Uri.parse('$baseUrl/mistakes').replace(queryParameters: {
+      'keyword': keyword,
+      'category': category,
+    });
+    final res = await http.get(uri);
+    if (res.statusCode ~/ 100 != 2) throw Exception('list failed: ${res.statusCode}');
+    final arr = jsonDecode(res.body) as List<dynamic>;
+    return arr.map((e) => Mistake.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<Mistake> add(Mistake m) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/mistakes'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(m.toJson()),
+    );
+    if (res.statusCode ~/ 100 != 2) throw Exception('add failed: ${res.statusCode}');
+    return Mistake.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  Future<void> remove(String id) async {
+    final res = await http.delete(Uri.parse('$baseUrl/mistakes/$id'));
+    if (res.statusCode ~/ 100 != 2) throw Exception('delete failed: ${res.statusCode}');
+  }
+
+  Future<Mistake?> randomOne() async {
+    final res = await http.get(Uri.parse('$baseUrl/mistakes/random'));
+    if (res.statusCode ~/ 100 != 2) throw Exception('random failed: ${res.statusCode}');
+    if (res.body.trim() == 'null') return null;
+    return Mistake.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+}
+
+class LocalCache {
+  static const _k = 'mistakes_cache';
+
+  Future<void> save(List<Mistake> items) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_k, jsonEncode(items.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<Mistake>> load() async {
+    final sp = await SharedPreferences.getInstance();
+    final raw = sp.getString(_k);
+    if (raw == null || raw.isEmpty) return [];
+    final arr = jsonDecode(raw) as List<dynamic>;
+    return arr.map((e) => Mistake.fromJson(e as Map<String, dynamic>)).toList();
+  }
 }
 
 class MobileApp extends StatelessWidget {
@@ -45,26 +122,78 @@ class MobileHome extends StatefulWidget {
 
 class _MobileHomeState extends State<MobileHome> {
   int tab = 0;
-  final List<Mistake> items = [
-    Mistake(
-      id: 'm001',
-      question: 'for循环边界写错导致数组越界',
-      wrongAnswer: 'i <= arr.length',
-      correctAnswer: 'i < arr.length',
-      reason: 'length 是元素个数，最后一个索引是 length-1',
-      category: 'Java',
-    ),
-  ];
+  List<Mistake> items = [];
+  bool loading = true;
 
-  void addMistake(Mistake m) => setState(() => items.insert(0, m));
-  void deleteMistake(String id) => setState(() => items.removeWhere((e) => e.id == id));
+  final api = MistakeApi();
+  final cache = LocalCache();
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final local = await cache.load();
+    if (mounted) {
+      setState(() {
+        items = local;
+        loading = false;
+      });
+    }
+    await reloadFromServer(silent: true);
+  }
+
+  Future<void> reloadFromServer({bool silent = false}) async {
+    try {
+      final remote = await api.list();
+      if (mounted) setState(() => items = remote);
+      await cache.save(remote);
+      if (mounted && !silent) _toast('已从后端同步');
+    } catch (_) {
+      if (mounted && !silent) _toast('后端不可用，使用本地缓存');
+    }
+  }
+
+  Future<void> addMistake(Mistake m) async {
+    try {
+      await api.add(m);
+      await reloadFromServer(silent: true);
+      _toast('已添加并同步');
+    } catch (_) {
+      final next = [m, ...items];
+      setState(() => items = next);
+      await cache.save(next);
+      _toast('后端不可用，已保存到本地缓存');
+    }
+  }
+
+  Future<void> deleteMistake(String id) async {
+    try {
+      await api.remove(id);
+      await reloadFromServer(silent: true);
+      _toast('已删除并同步');
+    } catch (_) {
+      final next = items.where((e) => e.id != id).toList();
+      setState(() => items = next);
+      await cache.save(next);
+      _toast('后端不可用，本地已删除');
+    }
+  }
+
+  void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final pages = [
       AddPage(onAdd: addMistake),
-      QueryPage(items: items, onDelete: deleteMistake),
-      ReviewPage(items: items),
+      QueryPage(items: items, onDelete: deleteMistake, onRefresh: reloadFromServer),
+      ReviewPage(items: items, api: api),
     ];
 
     return Scaffold(
@@ -83,7 +212,7 @@ class _MobileHomeState extends State<MobileHome> {
 }
 
 class AddPage extends StatefulWidget {
-  final void Function(Mistake) onAdd;
+  final Future<void> Function(Mistake) onAdd;
   const AddPage({super.key, required this.onAdd});
 
   @override
@@ -111,9 +240,9 @@ class _AddPageState extends State<AddPage> {
           _field('分类', cat),
           const SizedBox(height: 12),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               if (q.text.trim().isEmpty) return;
-              widget.onAdd(Mistake(
+              await widget.onAdd(Mistake(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
                 question: q.text.trim(),
                 wrongAnswer: w.text.trim(),
@@ -121,8 +250,11 @@ class _AddPageState extends State<AddPage> {
                 reason: r.text.trim(),
                 category: cat.text.trim().isEmpty ? '未分类' : cat.text.trim(),
               ));
-              q.clear(); w.clear(); c.clear(); r.clear(); cat.clear();
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已添加错题')));
+              q.clear();
+              w.clear();
+              c.clear();
+              r.clear();
+              cat.clear();
             },
             child: const Text('保存错题'),
           )
@@ -143,8 +275,9 @@ class _AddPageState extends State<AddPage> {
 
 class QueryPage extends StatefulWidget {
   final List<Mistake> items;
-  final void Function(String id) onDelete;
-  const QueryPage({super.key, required this.items, required this.onDelete});
+  final Future<void> Function(String id) onDelete;
+  final Future<void> Function({bool silent}) onRefresh;
+  const QueryPage({super.key, required this.items, required this.onDelete, required this.onRefresh});
 
   @override
   State<QueryPage> createState() => _QueryPageState();
@@ -152,6 +285,7 @@ class QueryPage extends StatefulWidget {
 
 class _QueryPageState extends State<QueryPage> {
   String keyword = '';
+
   @override
   Widget build(BuildContext context) {
     final filtered = widget.items
@@ -159,7 +293,16 @@ class _QueryPageState extends State<QueryPage> {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('手机端 · 错题查询')),
+      appBar: AppBar(
+        title: const Text('手机端 · 错题查询'),
+        actions: [
+          IconButton(
+            onPressed: () => widget.onRefresh(silent: false),
+            icon: const Icon(Icons.sync),
+            tooltip: '同步后端',
+          )
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -199,7 +342,8 @@ class _QueryPageState extends State<QueryPage> {
 
 class ReviewPage extends StatefulWidget {
   final List<Mistake> items;
-  const ReviewPage({super.key, required this.items});
+  final MistakeApi api;
+  const ReviewPage({super.key, required this.items, required this.api});
 
   @override
   State<ReviewPage> createState() => _ReviewPageState();
@@ -209,7 +353,18 @@ class _ReviewPageState extends State<ReviewPage> {
   Mistake? current;
   bool showAnswer = false;
 
-  void pick() {
+  Future<void> pick() async {
+    try {
+      final remote = await widget.api.randomOne();
+      if (remote != null) {
+        setState(() {
+          current = remote;
+          showAnswer = false;
+        });
+        return;
+      }
+    } catch (_) {}
+
     if (widget.items.isEmpty) return;
     final m = widget.items[Random().nextInt(widget.items.length)];
     setState(() {

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "m001",
+    "question": "for循环边界写错导致数组越界",
+    "wrongAnswer": "i <= arr.length",
+    "correctAnswer": "i < arr.length",
+    "reason": "length 是元素个数，最后一个索引是 length-1",
+    "category": "Java",
+    "tags": ["循环", "边界"]
+  }
+]
