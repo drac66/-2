@@ -1,21 +1,39 @@
 # Error Book（多端错题本）
 
-技术路线（按你新要求）：
-- `apps/mobile_flutter`：手机端 Flutter（Android / iOS）
-- `apps/desktop_java`：电脑端 Java（Swing）
-- `packages/shared_schema`：跨端共享数据结构说明（JSON Schema）
+## 技术栈
+- 电脑端：Java Swing（`apps/desktop_java`）
+- 手机端：Flutter（`apps/mobile_flutter`）
+- 统一字段：`packages/shared_schema/mistake.schema.json`
 
-## 功能目标
+## 已完成功能
+### 电脑端（Java）
 1. 错题添加
-2. 错题查询（分类、关键词）
-3. 错题复习（随机抽题）
-4. 错题编辑 / 删除
+2. 错题查询（分类/关键词）
+3. 随机复习
+4. 错题编辑/删除
+5. 本地 JSON 存储
 
-## 端侧定位
-- 手机端：快速录入 + 随手复习
-- 电脑端：高密度管理（筛选 / 列表 / 详情）
+### 手机端（Flutter）
+1. 错题添加
+2. 错题查询（关键词）
+3. 随机复习
+4. 错题删除
 
-## 本次已完成
-- Java 桌面端骨架（含三栏 UI）
-- Flutter 手机端骨架
-- 统一错题 JSON 字段约定
+## 快速运行
+### Java 电脑端
+```bat
+cd apps\desktop_java
+run.bat
+```
+
+### Flutter 手机端
+```bash
+cd apps/mobile_flutter
+flutter pub get
+flutter run
+```
+
+## 下一步建议
+- 手机端加本地持久化（shared_preferences/sqflite）
+- 两端统一接后端 API（CloudBase/Supabase）
+- 增加“分类筛选 + 编辑 + 复习统计”

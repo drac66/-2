@@ -1,9 +1,15 @@
 # Desktop（电脑端）Java Swing
 
-目录结构：
-- `src/main/java/com/errorbook/app/Main.java`
-- `src/main/java/com/errorbook/app/ui/DesktopFrame.java`
+已实现（可运行）：
+- 错题新增
+- 错题查询（分类+关键词）
+- 错题随机复习（先题干后答案）
+- 错题编辑 / 删除
+- 本地 JSON 持久化：`data/mistakes.json`
 
-运行方式（本地有 JDK 17+）：
-1. `javac -d out src/main/java/com/errorbook/app/Main.java src/main/java/com/errorbook/app/ui/DesktopFrame.java`
-2. `java -cp out com.errorbook.app.Main`
+运行：
+```bat
+run.bat
+```
+
+JDK 要求：17+
