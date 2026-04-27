@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mistake",
+  "type": "object",
+  "required": ["id", "question", "wrongAnswer", "correctAnswer", "reason", "category"],
+  "properties": {
+    "id": {"type": "string"},
+    "question": {"type": "string"},
+    "wrongAnswer": {"type": "string"},
+    "correctAnswer": {"type": "string"},
+    "reason": {"type": "string"},
+    "category": {"type": "string"},
+    "tags": {"type": "array", "items": {"type": "string"}}
+  }
+}

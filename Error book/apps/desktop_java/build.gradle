@@ -1,0 +1,16 @@
+plugins {
+    id 'application'
+}
+
+group = 'com.errorbook'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+application {
+    mainClass = 'com.errorbook.app.Main'
+}
