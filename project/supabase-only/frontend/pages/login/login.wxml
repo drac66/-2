@@ -1,7 +1,0 @@
-<view class="container">
-  <view class="card">
-    <view class="title">欢迎来到我们的空间 💗</view>
-    <view style="margin-bottom: 20rpx; color:#666;">仅白名单用户可进入</view>
-    <button class="btn-primary" bindtap="wxLogin">微信一键登录</button>
-  </view>
-</view>

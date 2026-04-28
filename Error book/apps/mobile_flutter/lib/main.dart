@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 void main() => runApp(const MobileApp());
 
@@ -14,6 +17,9 @@ class Mistake {
   final String correctAnswer;
   final String reason;
   final String category;
+  final String questionImagePath;
+  final String wrongAnswerImagePath;
+  final String correctAnswerImagePath;
 
   Mistake({
     required this.id,
@@ -22,6 +28,9 @@ class Mistake {
     required this.correctAnswer,
     required this.reason,
     required this.category,
+    this.questionImagePath = '',
+    this.wrongAnswerImagePath = '',
+    this.correctAnswerImagePath = '',
   });
 
   factory Mistake.fromJson(Map<String, dynamic> j) => Mistake(
@@ -31,6 +40,9 @@ class Mistake {
         correctAnswer: (j['correctAnswer'] ?? '').toString(),
         reason: (j['reason'] ?? '').toString(),
         category: (j['category'] ?? '未分类').toString(),
+        questionImagePath: (j['questionImagePath'] ?? '').toString(),
+        wrongAnswerImagePath: (j['wrongAnswerImagePath'] ?? '').toString(),
+        correctAnswerImagePath: (j['correctAnswerImagePath'] ?? '').toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -40,6 +52,9 @@ class Mistake {
         'correctAnswer': correctAnswer,
         'reason': reason,
         'category': category,
+        'questionImagePath': questionImagePath,
+        'wrongAnswerImagePath': wrongAnswerImagePath,
+        'correctAnswerImagePath': correctAnswerImagePath,
       };
 }
 
@@ -225,6 +240,163 @@ class _AddPageState extends State<AddPage> {
   final c = TextEditingController();
   final r = TextEditingController();
   final cat = TextEditingController();
+  final picker = ImagePicker();
+
+  String questionImagePath = '';
+  String wrongAnswerImagePath = '';
+  String correctAnswerImagePath = '';
+
+  Future<void> _pickImage({required bool fromCamera, required String target}) async {
+    final x = await picker.pickImage(
+      source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 2000,
+    );
+    if (x == null) return;
+    setState(() {
+      if (target == 'q') questionImagePath = x.path;
+      if (target == 'w') wrongAnswerImagePath = x.path;
+      if (target == 'c') correctAnswerImagePath = x.path;
+    });
+  }
+
+  String _targetPath(String target) {
+    if (target == 'q') return questionImagePath;
+    if (target == 'w') return wrongAnswerImagePath;
+    if (target == 'c') return correctAnswerImagePath;
+    return '';
+  }
+
+  TextEditingController _targetController(String target) {
+    if (target == 'q') return q;
+    if (target == 'w') return w;
+    return c;
+  }
+
+  Future<void> _recognizeText(String target) async {
+    final path = _targetPath(target);
+    if (path.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请先拍照或选择图片')));
+      return;
+    }
+
+    final input = InputImage.fromFilePath(path);
+    final recognizer = TextRecognizer(script: TextRecognitionScript.chinese);
+    try {
+      final result = await recognizer.processImage(input);
+      final text = result.text.trim();
+      if (text.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('未识别到文字，可换张更清晰的图')));
+        return;
+      }
+      final ctrl = _targetController(target);
+      final old = ctrl.text.trim();
+      ctrl.text = old.isEmpty ? text : '$old\n$text';
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('识别完成，已填入文本框')));
+      setState(() {});
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('识别失败，请重试')));
+    } finally {
+      await recognizer.close();
+    }
+  }
+
+  Future<void> _showPickSheet(String target) async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('拍照'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _pickImage(fromCamera: true, target: target);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('从相册选择'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _pickImage(fromCamera: false, target: target);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _imagePickerBlock({required String title, required String path, required String target}) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            if (path.isEmpty)
+              Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: const Text('未选择图片'),
+              )
+            else
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(File(path), height: 160, width: double.infinity, fit: BoxFit.cover),
+              ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showPickSheet(target),
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('拍照/相册'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _recognizeText(target),
+                    icon: const Icon(Icons.text_snippet_outlined),
+                    label: const Text('识别文字'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: '清空图片',
+                  onPressed: () {
+                    setState(() {
+                      if (target == 'q') questionImagePath = '';
+                      if (target == 'w') wrongAnswerImagePath = '';
+                      if (target == 'c') correctAnswerImagePath = '';
+                    });
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -233,15 +405,18 @@ class _AddPageState extends State<AddPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _field('题干', q),
-          _field('错误答案', w),
-          _field('正确答案', c),
+          _imagePickerBlock(title: '题干图片（可拍照/相册）', path: questionImagePath, target: 'q'),
+          _field('题干（可选，支持补充文字）', q),
+          _imagePickerBlock(title: '错误答案图片（可拍照/相册）', path: wrongAnswerImagePath, target: 'w'),
+          _field('错误答案（可选）', w),
+          _imagePickerBlock(title: '正确答案图片（可拍照/相册）', path: correctAnswerImagePath, target: 'c'),
+          _field('正确答案（可选）', c),
           _field('错误原因', r),
           _field('分类', cat),
           const SizedBox(height: 12),
           FilledButton(
             onPressed: () async {
-              if (q.text.trim().isEmpty) return;
+              if (q.text.trim().isEmpty && questionImagePath.isEmpty) return;
               await widget.onAdd(Mistake(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
                 question: q.text.trim(),
@@ -249,12 +424,20 @@ class _AddPageState extends State<AddPage> {
                 correctAnswer: c.text.trim(),
                 reason: r.text.trim(),
                 category: cat.text.trim().isEmpty ? '未分类' : cat.text.trim(),
+                questionImagePath: questionImagePath,
+                wrongAnswerImagePath: wrongAnswerImagePath,
+                correctAnswerImagePath: correctAnswerImagePath,
               ));
               q.clear();
               w.clear();
               c.clear();
               r.clear();
               cat.clear();
+              setState(() {
+                questionImagePath = '';
+                wrongAnswerImagePath = '';
+                correctAnswerImagePath = '';
+              });
             },
             child: const Text('保存错题'),
           )
@@ -268,7 +451,7 @@ class _AddPageState extends State<AddPage> {
         child: TextField(
           controller: ctrl,
           decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-          maxLines: label == '题干' || label == '错误原因' ? 3 : 1,
+          maxLines: label.contains('题干') || label.contains('原因') ? 3 : 1,
         ),
       );
 }
@@ -285,6 +468,56 @@ class QueryPage extends StatefulWidget {
 
 class _QueryPageState extends State<QueryPage> {
   String keyword = '';
+
+  void _showMistakeDetail(BuildContext context, Mistake m) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('分类：${m.category}', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            Text('题干：${m.question.isEmpty ? '（见图片）' : m.question}'),
+            if (m.questionImagePath.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(File(m.questionImagePath), fit: BoxFit.contain),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text('错误答案：${m.wrongAnswer.isEmpty ? '（见图片）' : m.wrongAnswer}'),
+            if (m.wrongAnswerImagePath.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(File(m.wrongAnswerImagePath), fit: BoxFit.contain),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text('正确答案：${m.correctAnswer.isEmpty ? '（见图片）' : m.correctAnswer}'),
+            if (m.correctAnswerImagePath.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(File(m.correctAnswerImagePath), fit: BoxFit.contain),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text('错误原因：${m.reason.isEmpty ? '（未填写）' : m.reason}'),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -322,13 +555,28 @@ class _QueryPageState extends State<QueryPage> {
                       return Card(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         child: ListTile(
-                          title: Text(m.question, maxLines: 1, overflow: TextOverflow.ellipsis),
-                          subtitle: Text('分类: ${m.category}\n原因: ${m.reason}', maxLines: 2, overflow: TextOverflow.ellipsis),
-                          isThreeLine: true,
+                          title: Text(m.question.isEmpty ? '（图片错题）' : m.question, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('分类: ${m.category}'),
+                              Text('原因: ${m.reason}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 6),
+                              if (m.questionImagePath.isNotEmpty)
+                                Text('📷 题干图已保存', style: TextStyle(color: Colors.green.shade700)),
+                              if (m.wrongAnswerImagePath.isNotEmpty)
+                                Text('📷 错误答案图已保存', style: TextStyle(color: Colors.green.shade700)),
+                              if (m.correctAnswerImagePath.isNotEmpty)
+                                Text('📷 正确答案图已保存', style: TextStyle(color: Colors.green.shade700)),
+                            ],
+                          ),
+                          isThreeLine: false,
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline),
                             onPressed: () => widget.onDelete(m.id),
                           ),
+                          onTap: () => _showMistakeDetail(context, m),
                         ),
                       );
                     },

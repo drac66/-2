@@ -11,6 +11,14 @@ dependencies:
     sdk: flutter
   http: ^1.2.1
   shared_preferences: ^2.2.3
+  image_picker: ^1.1.2
+  google_mlkit_text_recognition: ^0.15.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
+
