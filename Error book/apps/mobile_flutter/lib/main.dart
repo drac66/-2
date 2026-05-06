@@ -468,6 +468,60 @@ class QueryPage extends StatefulWidget {
 
 class _QueryPageState extends State<QueryPage> {
   String keyword = '';
+  final TextEditingController _bookNameCtrl = TextEditingController();
+  static const String _booksKey = 'mistake_notebooks';
+  List<String> notebooks = ['全部'];
+  String selectedBook = '全部';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBooks();
+  }
+
+  Future<void> _loadBooks() async {
+    final sp = await SharedPreferences.getInstance();
+    final saved = sp.getStringList(_booksKey) ?? [];
+    setState(() {
+      notebooks = ['全部', ...saved.where((e) => e.trim().isNotEmpty && e != '全部')];
+      if (!notebooks.contains(selectedBook)) selectedBook = '全部';
+    });
+  }
+
+  Future<void> _saveBooks() async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setStringList(_booksKey, notebooks.where((e) => e != '全部').toList());
+  }
+
+  Future<void> _addNotebookDialog() async {
+    _bookNameCtrl.clear();
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('新建错题本'),
+        content: TextField(
+          controller: _bookNameCtrl,
+          decoration: const InputDecoration(hintText: '输入错题本名称（如：高数、英语）'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () async {
+              final name = _bookNameCtrl.text.trim();
+              if (name.isEmpty || notebooks.contains(name)) return;
+              setState(() {
+                notebooks.add(name);
+                selectedBook = name;
+              });
+              await _saveBooks();
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: const Text('添加'),
+          )
+        ],
+      ),
+    );
+  }
 
   void _showMistakeDetail(BuildContext context, Mistake m) {
     showModalBottomSheet(
@@ -522,13 +576,22 @@ class _QueryPageState extends State<QueryPage> {
   @override
   Widget build(BuildContext context) {
     final filtered = widget.items
-        .where((e) => e.question.contains(keyword) || e.reason.contains(keyword) || e.category.contains(keyword))
+        .where((e) {
+          final inBook = selectedBook == '全部' || e.category == selectedBook;
+          final hitKeyword = e.question.contains(keyword) || e.reason.contains(keyword) || e.category.contains(keyword);
+          return inBook && hitKeyword;
+        })
         .toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('手机端 · 错题查询'),
+        title: const Text('手机端 · 错题本'),
         actions: [
+          IconButton(
+            onPressed: _addNotebookDialog,
+            icon: const Icon(Icons.menu_book_outlined),
+            tooltip: '新建错题本',
+          ),
           IconButton(
             onPressed: () => widget.onRefresh(silent: false),
             icon: const Icon(Icons.sync),
@@ -538,6 +601,23 @@ class _QueryPageState extends State<QueryPage> {
       ),
       body: Column(
         children: [
+          SizedBox(
+            height: 52,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, i) {
+                final b = notebooks[i];
+                return ChoiceChip(
+                  label: Text(b),
+                  selected: b == selectedBook,
+                  onSelected: (_) => setState(() => selectedBook = b),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemCount: notebooks.length,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -547,7 +627,7 @@ class _QueryPageState extends State<QueryPage> {
           ),
           Expanded(
             child: filtered.isEmpty
-                ? const Center(child: Text('没有匹配到错题'))
+                ? const Center(child: Text('这个错题本里还没有内容'))
                 : ListView.builder(
                     itemCount: filtered.length,
                     itemBuilder: (_, i) {
@@ -562,16 +642,8 @@ class _QueryPageState extends State<QueryPage> {
                             children: [
                               Text('分类: ${m.category}'),
                               Text('原因: ${m.reason}', maxLines: 2, overflow: TextOverflow.ellipsis),
-                              const SizedBox(height: 6),
-                              if (m.questionImagePath.isNotEmpty)
-                                Text('📷 题干图已保存', style: TextStyle(color: Colors.green.shade700)),
-                              if (m.wrongAnswerImagePath.isNotEmpty)
-                                Text('📷 错误答案图已保存', style: TextStyle(color: Colors.green.shade700)),
-                              if (m.correctAnswerImagePath.isNotEmpty)
-                                Text('📷 正确答案图已保存', style: TextStyle(color: Colors.green.shade700)),
                             ],
                           ),
-                          isThreeLine: false,
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline),
                             onPressed: () => widget.onDelete(m.id),

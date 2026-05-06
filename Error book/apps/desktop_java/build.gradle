@@ -5,10 +5,18 @@ plugins {
 group = 'com.errorbook'
 version = '0.1.0'
 
+repositories {
+    mavenCentral()
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
+}
+
+dependencies {
+    implementation 'net.sourceforge.tess4j:tess4j:5.13.0'
 }
 
 application {
