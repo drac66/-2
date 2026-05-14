@@ -1,9 +1,0 @@
-{
-  "desc": "sitemap for miniprogram upload",
-  "rules": [
-    {
-      "action": "allow",
-      "page": "*"
-    }
-  ]
-}
