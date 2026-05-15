@@ -63,6 +63,36 @@ class LocalStore {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(_key, jsonEncode(data.map((e) => e.toJson()).toList()));
   }
+
+  Future<String> exportJson(List<Mistake> data) async {
+    final payload = {
+      'schema': 'error_book_export_v1',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'count': data.length,
+      'items': data.map((e) => e.toJson()).toList(),
+    };
+    final json = const JsonEncoder.withIndent('  ').convert(payload);
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString('${_key}_export_last', json);
+    return json;
+  }
+
+  Future<int> importJson(String raw) async {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('格式错误：根节点必须是对象');
+    }
+    final items = decoded['items'];
+    if (items is! List) {
+      throw const FormatException('格式错误：缺少 items 数组');
+    }
+    final list = items
+        .whereType<Map>()
+        .map((e) => Mistake.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+    await save(list);
+    return list.length;
+  }
 }
 
 class ErrorBookApp extends StatelessWidget {
@@ -138,6 +168,83 @@ class _HomePageState extends State<HomePage> {
 
   Set<String> get categories => {'全部', ...items.map((e) => e.category)};
 
+  Future<void> _showDataTools() async {
+    final controller = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 12,
+          right: 12,
+          top: 12,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 12,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('数据迁移（离线）', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              const Text('导出会生成 JSON 文本，可复制到聊天/备忘录；导入时把 JSON 粘贴回来即可。'),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final json = await store.exportJson(items);
+                        controller.text = json;
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(content: Text('已导出 ${items.length} 条，可复制下方 JSON')));
+                      },
+                      icon: const Icon(Icons.upload_file_outlined),
+                      label: const Text('导出 JSON'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        try {
+                          final count = await store.importJson(controller.text.trim());
+                          await _load();
+                          if (!mounted) return;
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text('导入成功，共 $count 条')));
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text('导入失败：$e')));
+                        }
+                      },
+                      icon: const Icon(Icons.download_outlined),
+                      label: const Text('导入 JSON'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                maxLines: 14,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: '这里会显示导出的 JSON，或粘贴待导入 JSON',
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text('提示：导入会覆盖当前本地数据。', style: TextStyle(color: Colors.redAccent)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -159,7 +266,16 @@ class _HomePageState extends State<HomePage> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('错题本（纯手机离线）')),
+      appBar: AppBar(
+        title: const Text('错题本（纯手机离线）'),
+        actions: [
+          IconButton(
+            tooltip: '数据导入/导出',
+            onPressed: _showDataTools,
+            icon: const Icon(Icons.import_export),
+          )
+        ],
+      ),
       body: pages[tab],
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
