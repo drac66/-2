@@ -1,0 +1,26 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Java / Gradle
+**/build/
+**/out/
+**/.gradle/
+*.class
+
+# Flutter / Dart
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/coverage/
+**/app.*.symbols
+**/app.*.map.json
+
+# Logs and local env
+*.log
+*.tmp
+*.local
